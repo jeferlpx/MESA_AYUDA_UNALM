@@ -1,0 +1,34 @@
+services:
+  backend:
+    build: ./server
+    container_name: mesaayuda-backend
+    restart: always
+    networks:
+      - red_mesa_ayuda
+    env_file:
+      - .env
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build: ./client
+    container_name: mesaayuda-frontend
+    restart: always
+    networks:
+      - red_mesa_ayuda
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+networks:
+  red_mesa_ayuda:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.200.0.0/24
+
+volumes:
+  uploads_data:

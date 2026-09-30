@@ -1,0 +1,687 @@
+import { dbPool } from '../config/db';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import {
+  TicketDB,
+  TicketStatus,
+  RoleCode,
+  ModuleArea,
+  TicketCommentDB,
+  AttachmentDB,
+  AuditLogDB,
+  TicketComplejidad,
+  DashboardMetrics,
+} from '../types';
+import { calculateSLADeadlines } from '../utils/sla';
+
+export class TicketModel {
+  static async findById(id: number): Promise<TicketDB | null> {
+    const [rows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT t.*,
+              CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre,
+              sol.email as solicitante_email,
+              sol.facultad_dependencia as solicitante_dependencia,
+              sol.telefono as solicitante_telefono,
+              sol.anexo as solicitante_anexo,
+              sol.foto_perfil as solicitante_foto,
+              CONCAT(tec.nombres, ' ', tec.apellidos) as tecnico_nombre,
+              tec.email as tecnico_email,
+              tec.foto_perfil as tecnico_foto,
+              tec.facultad_dependencia as tecnico_dependencia,
+              tec.cargo as tecnico_cargo,
+              tec.especialidad as tecnico_especialidad,
+              tec.telefono as tecnico_telefono,
+              (SELECT ROUND(COALESCE(AVG(puntuacion), 5.0), 1) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_promedio_estrellas,
+              (SELECT COUNT(id) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_total_calificaciones,
+              (SELECT COUNT(id) FROM tickets WHERE tecnico_id = tec.id AND estado = 'RESUELTO') as tecnico_total_resueltos,
+              cat.nombre as categoria_nombre,
+              cat.sla_horas_respuesta as categoria_sla_respuesta,
+              cat.sla_horas_resolucion as categoria_sla_resolucion,
+              es.puntuacion as encuesta_puntuacion,
+              es.comentario as encuesta_comentario
+       FROM tickets t
+       INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+       LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+       INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
+       LEFT JOIN encuestas_satisfaccion es ON t.id = es.ticket_id
+       WHERE t.id = ?`,
+      [id]
+    );
+
+    if (rows.length === 0) return null;
+    return rows[0] as TicketDB;
+  }
+
+  static async findByCode(code: string): Promise<TicketDB | null> {
+    const [rows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT t.*,
+              CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre,
+              sol.email as solicitante_email,
+              sol.facultad_dependencia as solicitante_dependencia,
+              sol.telefono as solicitante_telefono,
+              sol.anexo as solicitante_anexo,
+              sol.foto_perfil as solicitante_foto,
+              CONCAT(tec.nombres, ' ', tec.apellidos) as tecnico_nombre,
+              tec.email as tecnico_email,
+              tec.foto_perfil as tecnico_foto,
+              tec.facultad_dependencia as tecnico_dependencia,
+              tec.cargo as tecnico_cargo,
+              tec.especialidad as tecnico_especialidad,
+              tec.telefono as tecnico_telefono,
+              (SELECT ROUND(COALESCE(AVG(puntuacion), 5.0), 1) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_promedio_estrellas,
+              (SELECT COUNT(id) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_total_calificaciones,
+              (SELECT COUNT(id) FROM tickets WHERE tecnico_id = tec.id AND estado = 'RESUELTO') as tecnico_total_resueltos,
+              cat.nombre as categoria_nombre,
+              es.puntuacion as encuesta_puntuacion,
+              es.comentario as encuesta_comentario
+       FROM tickets t
+       INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+       LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+       INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
+       LEFT JOIN encuestas_satisfaccion es ON t.id = es.ticket_id
+       WHERE t.codigo_correlativo = ?`,
+      [code]
+    );
+
+    if (rows.length === 0) return null;
+    return rows[0] as TicketDB;
+  }
+
+  static async searchTickets(filters: {
+    userRole: RoleCode;
+    userId: number;
+    modulo?: ModuleArea;
+    estado?: TicketStatus;
+    categoriaId?: number;
+    tecnicoId?: number;
+    searchQuery?: string;
+    prioridad?: string;
+    canalOrigen?: string;
+    excluirCanalOrigen?: string;
+  }): Promise<TicketDB[]> {
+    let sql = `
+      SELECT t.*,
+             CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre,
+             sol.email as solicitante_email,
+             sol.facultad_dependencia as solicitante_dependencia,
+             sol.telefono as solicitante_telefono,
+             sol.anexo as solicitante_anexo,
+             sol.foto_perfil as solicitante_foto,
+             CONCAT(tec.nombres, ' ', tec.apellidos) as tecnico_nombre,
+             tec.email as tecnico_email,
+             tec.foto_perfil as tecnico_foto,
+             tec.facultad_dependencia as tecnico_dependencia,
+             tec.cargo as tecnico_cargo,
+             tec.especialidad as tecnico_especialidad,
+             tec.telefono as tecnico_telefono,
+             (SELECT ROUND(COALESCE(AVG(puntuacion), 5.0), 1) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_promedio_estrellas,
+             (SELECT COUNT(id) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_total_calificaciones,
+             (SELECT COUNT(id) FROM tickets WHERE tecnico_id = tec.id AND estado = 'RESUELTO') as tecnico_total_resueltos,
+             cat.nombre as categoria_nombre,
+             es.puntuacion as encuesta_puntuacion,
+             es.comentario as encuesta_comentario
+      FROM tickets t
+      INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+      LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+      INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
+      LEFT JOIN encuestas_satisfaccion es ON t.id = es.ticket_id
+      WHERE 1=1
+    `;
+
+    const params: any[] = [];
+
+    // REGLA CLAVE DE AISLAMIENTO POR ROL Y MÓDULO (OTIC vs SERVICIOS GENERALES)
+    if (filters.userRole === 'TECNICO') {
+      sql += ` AND t.tecnico_id = ? AND t.modulo = 'OTIC'`;
+      params.push(filters.userId);
+    } else if (filters.userRole === 'TECNICO_SG') {
+      sql += ` AND t.tecnico_id = ? AND t.modulo = 'SERVICIOS_GENERALES'`;
+      params.push(filters.userId);
+    } else if (filters.userRole === 'MESA_AYUDA' || filters.userRole === 'SUPERVISOR') {
+      sql += ` AND t.modulo = 'OTIC'`;
+    } else if (filters.userRole === 'MESA_AYUDA_SG' || filters.userRole === 'SUPERVISOR_SG') {
+      sql += ` AND t.modulo = 'SERVICIOS_GENERALES'`;
+    } else if (filters.userRole === 'SOLICITANTE') {
+      sql += ` AND t.solicitante_id = ?`;
+      params.push(filters.userId);
+      if (filters.modulo) {
+        sql += ` AND t.modulo = ?`;
+        params.push(filters.modulo);
+      }
+    } else if (filters.userRole === 'ADMIN') {
+      if (filters.modulo) {
+        sql += ` AND t.modulo = ?`;
+        params.push(filters.modulo);
+      }
+    }
+
+    if (filters.estado) {
+      sql += ` AND t.estado = ?`;
+      params.push(filters.estado);
+    }
+
+    if (filters.canalOrigen) {
+      sql += ` AND t.canal_origen = ?`;
+      params.push(filters.canalOrigen);
+    }
+
+    if (filters.excluirCanalOrigen) {
+      sql += ` AND (t.canal_origen != ? OR t.canal_origen IS NULL)`;
+      params.push(filters.excluirCanalOrigen);
+    }
+
+    if (filters.categoriaId) {
+      sql += ` AND t.categoria_id = ?`;
+      params.push(filters.categoriaId);
+    }
+
+    if (filters.tecnicoId && !['TECNICO', 'TECNICO_SG'].includes(filters.userRole)) {
+      sql += ` AND t.tecnico_id = ?`;
+      params.push(filters.tecnicoId);
+    }
+
+    if (filters.prioridad) {
+      sql += ` AND t.prioridad = ?`;
+      params.push(filters.prioridad);
+    }
+
+    if (filters.searchQuery) {
+      sql += ` AND (t.codigo_correlativo LIKE ? OR t.titulo LIKE ? OR t.descripcion LIKE ? OR sol.nombres LIKE ? OR sol.apellidos LIKE ?)`;
+      const q = `%${filters.searchQuery}%`;
+      params.push(q, q, q, q, q);
+    }
+
+    sql += ` ORDER BY t.id DESC LIMIT 300`;
+
+    const [rows] = await dbPool.query<RowDataPacket[]>(sql, params);
+    return rows as TicketDB[];
+  }
+
+  static async createTicket(data: {
+    codigoCorrelativo: string;
+    modulo?: ModuleArea;
+    titulo: string;
+    descripcion: string;
+    tipo: string;
+    prioridad: string;
+    impacto: string;
+    urgencia: string;
+    complejidad?: string;
+    solicitanteId: number;
+    tecnicoId?: number | null;
+    categoriaId: number;
+    ubicacionOficina?: string;
+    referenciaUbicacion?: string;
+    contactoLocal?: string;
+    horarioAcceso?: string;
+    subtipoIntervencion?: string;
+    datosVehiculares?: string;
+    materialesUsados?: string;
+    canalOrigen?: string;
+    fechaLimiteRespuesta?: Date | null;
+    fechaLimiteResolucion?: Date | null;
+  }): Promise<number> {
+    const estadoInicial = data.tecnicoId ? 'ASIGNADO' : 'REPORTADO';
+
+    const [result] = await dbPool.query<ResultSetHeader>(
+      `INSERT INTO tickets (
+        codigo_correlativo, modulo, titulo, descripcion, tipo, prioridad, impacto, urgencia, complejidad, estado,
+        solicitante_id, tecnico_id, categoria_id, ubicacion_oficina, referencia_ubicacion, contacto_local, horario_acceso,
+        subtipo_intervencion, datos_vehiculares, materiales_usados, canal_origen,
+        fecha_limite_respuesta, fecha_limite_resolucion
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.codigoCorrelativo,
+        data.modulo || 'OTIC',
+        data.titulo,
+        data.descripcion,
+        data.tipo,
+        data.prioridad,
+        data.impacto,
+        data.urgencia,
+        data.complejidad || 'BAJA',
+        estadoInicial,
+        data.solicitanteId,
+        data.tecnicoId || null,
+        data.categoriaId,
+        data.ubicacionOficina || null,
+        data.referenciaUbicacion || null,
+        data.contactoLocal || null,
+        data.horarioAcceso || null,
+        data.subtipoIntervencion || null,
+        data.datosVehiculares || null,
+        data.materialesUsados || null,
+        data.canalOrigen || 'PORTAL_WEB',
+        data.fechaLimiteRespuesta || null,
+        data.fechaLimiteResolucion || null,
+      ]
+    );
+
+    return result.insertId;
+  }
+
+  static async updateTicketStatus(
+    ticketId: number,
+    nuevoEstado: TicketStatus,
+    solucionDetalle?: string,
+    tecnicoIdAsignado?: number,
+    materialesUsados?: string,
+    materialesSobrantes?: string
+  ): Promise<void> {
+    const updates: string[] = ['estado = ?'];
+    const params: any[] = [nuevoEstado];
+
+    if (nuevoEstado === 'ASIGNADO' || nuevoEstado === 'EN_EJECUCION') {
+      updates.push(`fecha_primera_respuesta = IFNULL(fecha_primera_respuesta, ?)`);
+      params.push(new Date());
+    }
+
+    if (nuevoEstado === 'RESUELTO') {
+      updates.push(`fecha_resolucion = ?`);
+      params.push(new Date());
+    }
+
+    if (solucionDetalle !== undefined) {
+      updates.push(`solucion_detalle = ?`);
+      params.push(solucionDetalle);
+    }
+
+    if (materialesUsados !== undefined) {
+      updates.push(`materiales_usados = ?`);
+      params.push(materialesUsados);
+    }
+
+    if (materialesSobrantes !== undefined) {
+      updates.push(`materiales_sobrantes = ?`);
+      params.push(materialesSobrantes);
+    }
+
+    if (tecnicoIdAsignado) {
+      updates.push(`tecnico_id = ?`);
+      params.push(tecnicoIdAsignado);
+    }
+
+    params.push(ticketId);
+
+    const sql = `UPDATE tickets SET ${updates.join(', ')} WHERE id = ?`;
+    await dbPool.query(sql, params);
+  }
+
+  static async assignTechnicianWithComplexity(
+    ticketId: number,
+    tecnicoId: number,
+    complejidad: TicketComplejidad = 'BAJA'
+  ): Promise<void> {
+    // Obtener datos del ticket y categoría para recalcular SLA
+    const [tRows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT t.*, cat.sla_horas_respuesta, cat.sla_horas_resolucion
+       FROM tickets t
+       INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
+       WHERE t.id = ?`,
+      [ticketId]
+    );
+
+    if (tRows.length === 0) return;
+    const ticket = tRows[0];
+
+    const { fechaLimiteResolucion } = calculateSLADeadlines(
+      ticket.sla_horas_respuesta || 4,
+      ticket.sla_horas_resolucion || 24,
+      ticket.prioridad || 'MEDIA',
+      complejidad
+    );
+
+    await dbPool.query(
+      `UPDATE tickets 
+       SET tecnico_id = ?, 
+           complejidad = ?,
+           fecha_limite_resolucion = ?,
+           estado = 'ASIGNADO',
+           fecha_primera_respuesta = IFNULL(fecha_primera_respuesta, NOW())
+       WHERE id = ?`,
+      [tecnicoId, complejidad, fechaLimiteResolucion, ticketId]
+    );
+  }
+
+  static async deriveTicket(
+    ticketId: number,
+    nuevoTecnicoId: number,
+    nuevaCategoriaId?: number,
+    nuevaComplejidad?: TicketComplejidad
+  ): Promise<void> {
+    const updates: string[] = ['tecnico_id = ?', `estado = 'ASIGNADO'`];
+    const params: any[] = [nuevoTecnicoId];
+
+    if (nuevaCategoriaId) {
+      updates.push('categoria_id = ?');
+      params.push(nuevaCategoriaId);
+    }
+
+    if (nuevaComplejidad) {
+      updates.push('complejidad = ?');
+      params.push(nuevaComplejidad);
+    }
+
+    params.push(ticketId);
+    await dbPool.query(`UPDATE tickets SET ${updates.join(', ')} WHERE id = ?`, params);
+  }
+
+  static async reopenTicket(ticketId: number, motivo?: string, usuarioId?: number): Promise<void> {
+    await dbPool.query(
+      `UPDATE tickets 
+       SET estado = 'ASIGNADO',
+           fecha_resolucion = NULL,
+           solucion_detalle = NULL
+       WHERE id = ?`,
+      [ticketId]
+    );
+
+    // Registrar reapertura en auditoría
+    await this.logAudit({
+      ticketId,
+      usuarioId: usuarioId || undefined,
+      accion: 'REAPERTURA_TICKET',
+      campoModificado: 'estado',
+      valorAnterior: 'RESUELTO',
+      valorNuevo: `ASIGNADO - Motivo: ${motivo || 'Reapertura de ticket por solicitud usuaria'}`,
+    });
+  }
+
+  static async submitSatisfactionSurvey(data: {
+    ticketId: number;
+    tecnicoId?: number;
+    solicitanteId?: number;
+    puntuacion: number;
+    comentario?: string;
+  }): Promise<void> {
+    await dbPool.query(
+      `INSERT INTO encuestas_satisfaccion (ticket_id, tecnico_id, solicitante_id, puntuacion, comentario)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+         puntuacion = VALUES(puntuacion),
+         comentario = VALUES(comentario),
+         fecha_encuesta = NOW()`,
+      [
+        data.ticketId,
+        data.tecnicoId || null,
+        data.solicitanteId || null,
+        data.puntuacion,
+        data.comentario || null,
+      ]
+    );
+  }
+
+  static async getComments(ticketId: number, userRole: RoleCode): Promise<TicketCommentDB[]> {
+    let sql = `
+      SELECT c.*,
+             CONCAT(u.nombres, ' ', u.apellidos) as usuario_nombre,
+             r.codigo as usuario_rol
+      FROM comentarios_ticket c
+      INNER JOIN usuarios u ON c.usuario_id = u.id
+      INNER JOIN roles r ON u.rol_id = r.id
+      WHERE c.ticket_id = ?
+    `;
+
+    if (userRole === 'SOLICITANTE') {
+      sql += ` AND c.es_nota_interna = FALSE`;
+    }
+
+    sql += ` ORDER BY c.id ASC`;
+
+    const [rows] = await dbPool.query<RowDataPacket[]>(sql, [ticketId]);
+    return rows as TicketCommentDB[];
+  }
+
+  static async addComment(data: {
+    ticketId: number;
+    usuarioId: number;
+    mensaje: string;
+    esNotaInterna: boolean;
+  }): Promise<number> {
+    const [result] = await dbPool.query<ResultSetHeader>(
+      `INSERT INTO comentarios_ticket (ticket_id, usuario_id, mensaje, es_nota_interna)
+       VALUES (?, ?, ?, ?)`,
+      [data.ticketId, data.usuarioId, data.mensaje, data.esNotaInterna]
+    );
+    return result.insertId;
+  }
+
+  static async addAttachment(data: {
+    ticketId: number;
+    comentarioId?: number;
+    nombreOriginal: string;
+    nombreGuardado: string;
+    rutaServidor: string;
+    tamanoBytes: number;
+    mimeType: string;
+    subidoPorId: number;
+  }): Promise<number> {
+    const [result] = await dbPool.query<ResultSetHeader>(
+      `INSERT INTO adjuntos (ticket_id, comentario_id, nombre_original, nombre_guardado, ruta_servidor, tamano_bytes, mime_type, subido_por_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.ticketId,
+        data.comentarioId || null,
+        data.nombreOriginal,
+        data.nombreGuardado,
+        data.rutaServidor,
+        data.tamanoBytes,
+        data.mimeType,
+        data.subidoPorId,
+      ]
+    );
+    return result.insertId;
+  }
+
+  static async getAttachments(ticketId: number): Promise<AttachmentDB[]> {
+    const [rows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT a.*, CONCAT(u.nombres, ' ', u.apellidos) as subido_por_nombre
+       FROM adjuntos a
+       INNER JOIN usuarios u ON a.subido_por_id = u.id
+       WHERE a.ticket_id = ?
+       ORDER BY a.id ASC`,
+      [ticketId]
+    );
+    return rows as AttachmentDB[];
+  }
+
+  static async logAudit(data: {
+    ticketId: number;
+    usuarioId?: number;
+    accion: string;
+    campoModificado?: string;
+    valorAnterior?: string;
+    valorNuevo?: string;
+    ipOrigen?: string;
+    fecha?: Date;
+  }): Promise<void> {
+    const ahora = data.fecha || new Date();
+    await dbPool.query(
+      `INSERT INTO logs_auditoria (ticket_id, usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo, ip_origen, fecha)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.ticketId,
+        data.usuarioId || null,
+        data.accion,
+        data.campoModificado || null,
+        data.valorAnterior || null,
+        data.valorNuevo || null,
+        data.ipOrigen || null,
+        ahora,
+      ]
+    );
+  }
+
+  static async getAuditLogs(ticketId: number): Promise<AuditLogDB[]> {
+    const [rows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT l.*, 
+              CONCAT(u.nombres, ' ', u.apellidos) as usuario_nombre,
+              r.codigo as usuario_rol,
+              t.codigo_correlativo as ticket_codigo
+       FROM logs_auditoria l
+       LEFT JOIN usuarios u ON l.usuario_id = u.id
+       LEFT JOIN roles r ON u.rol_id = r.id
+       LEFT JOIN tickets t ON l.ticket_id = t.id
+       WHERE l.ticket_id = ?
+       ORDER BY l.id ASC`,
+      [ticketId]
+    );
+    return rows as AuditLogDB[];
+  }
+
+  static async getAuditLogsGlobal(filters?: {
+    search?: string;
+    accion?: string;
+    limite?: number;
+  }): Promise<AuditLogDB[]> {
+    let sql = `
+      SELECT l.*, 
+             CONCAT(u.nombres, ' ', u.apellidos) as usuario_nombre,
+             r.nombre as usuario_rol,
+             t.codigo_correlativo as ticket_codigo,
+             t.titulo as ticket_titulo
+      FROM logs_auditoria l
+      LEFT JOIN usuarios u ON l.usuario_id = u.id
+      LEFT JOIN roles r ON u.rol_id = r.id
+      LEFT JOIN tickets t ON l.ticket_id = t.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (filters?.accion) {
+      sql += ` AND l.accion = ?`;
+      params.push(filters.accion);
+    }
+
+    if (filters?.search) {
+      sql += ` AND (t.codigo_correlativo LIKE ? OR u.nombres LIKE ? OR u.apellidos LIKE ? OR l.valor_nuevo LIKE ?)`;
+      const q = `%${filters.search}%`;
+      params.push(q, q, q, q);
+    }
+
+    sql += ` ORDER BY l.id DESC LIMIT ?`;
+    params.push(filters?.limite || 100);
+
+    const [rows] = await dbPool.query<RowDataPacket[]>(sql, params);
+    return rows as AuditLogDB[];
+  }
+
+  static async getDashboardMetrics(modulo?: ModuleArea): Promise<DashboardMetrics> {
+    const whereModulo = modulo ? `WHERE modulo = ?` : '';
+    const moduloParams = modulo ? [modulo] : [];
+
+    // 1. Conteo total y por estado
+    const [totalRows] = await dbPool.query<RowDataPacket[]>(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN estado = 'REPORTADO' THEN 1 ELSE 0 END) as reportados,
+        SUM(CASE WHEN estado = 'ASIGNADO' THEN 1 ELSE 0 END) as asignados,
+        SUM(CASE WHEN estado = 'RESUELTO' THEN 1 ELSE 0 END) as resueltos,
+        AVG(CASE WHEN estado = 'RESUELTO' AND fecha_resolucion IS NOT NULL 
+            THEN TIMESTAMPDIFF(MINUTE, fecha_apertura, fecha_resolucion) / 60.0 ELSE NULL END) as avg_resolution_hours
+      FROM tickets
+      ${whereModulo}
+    `, moduloParams);
+
+    const metricsData = totalRows[0] || {};
+
+    // 2. Satisfacción promedio
+    const [surveyRows] = await dbPool.query<RowDataPacket[]>(`
+      SELECT AVG(es.puntuacion) as avg_score 
+      FROM encuestas_satisfaccion es
+      JOIN tickets t ON es.ticket_id = t.id
+      ${whereModulo.replace('modulo', 't.modulo')}
+    `, moduloParams);
+    const avgScore = Number(surveyRows[0]?.avg_score || 0);
+
+    // 3. Cumplimiento SLA
+    const [slaRows] = await dbPool.query<RowDataPacket[]>(`
+      SELECT 
+        COUNT(*) as total_resueltos,
+        SUM(CASE WHEN fecha_resolucion <= fecha_limite_resolucion THEN 1 ELSE 0 END) as cumplen_sla
+      FROM tickets
+      WHERE estado = 'RESUELTO' AND fecha_resolucion IS NOT NULL AND fecha_limite_resolucion IS NOT NULL
+      ${modulo ? 'AND modulo = ?' : ''}
+    `, moduloParams);
+    const totalSla = Number(slaRows[0]?.total_resueltos || 0);
+    const cumplenSla = Number(slaRows[0]?.cumplen_sla || 0);
+    const slaPercent = totalSla > 0 ? Math.round((cumplenSla / totalSla) * 100) : 100;
+
+    // 4. Carga por técnico
+    let techRoles = `('TECNICO', 'TECNICO_SG', 'SUPERVISOR', 'SUPERVISOR_SG', 'ADMIN')`;
+    if (modulo === 'SERVICIOS_GENERALES') {
+      techRoles = `('TECNICO_SG', 'SUPERVISOR_SG')`;
+    } else if (modulo === 'OTIC') {
+      techRoles = `('TECNICO', 'SUPERVISOR')`;
+    }
+
+    const [techRows] = await dbPool.query<RowDataPacket[]>(`
+      SELECT 
+        u.id as tecnicoId,
+        CONCAT(u.nombres, ' ', u.apellidos) as tecnicoNombre,
+        u.foto_perfil as fotoPerfil,
+        SUM(CASE WHEN t.estado = 'ASIGNADO' THEN 1 ELSE 0 END) as asignados,
+        SUM(CASE WHEN t.estado = 'RESUELTO' THEN 1 ELSE 0 END) as resueltos,
+        AVG(CASE WHEN t.estado = 'RESUELTO' AND t.fecha_resolucion IS NOT NULL 
+            THEN TIMESTAMPDIFF(MINUTE, t.fecha_apertura, t.fecha_resolucion) / 60.0 ELSE NULL END) as tiempoPromedioHoras,
+        (SELECT AVG(es.puntuacion) FROM encuestas_satisfaccion es WHERE es.tecnico_id = u.id) as calificacionPromedio
+      FROM usuarios u
+      INNER JOIN roles r ON u.rol_id = r.id
+      LEFT JOIN tickets t ON u.id = t.tecnico_id ${modulo ? 'AND t.modulo = ?' : ''}
+      WHERE r.codigo IN ${techRoles} AND u.estado = 'ACTIVO'
+      GROUP BY u.id, u.nombres, u.apellidos, u.foto_perfil
+      ORDER BY asignados DESC, resueltos DESC
+    `, moduloParams);
+
+    // 5. Volumen por categoría
+    const [catRows] = await dbPool.query<RowDataPacket[]>(`
+      SELECT 
+        c.id as categoriaId,
+        c.nombre as categoriaNombre,
+        COUNT(t.id) as total
+      FROM categorias_servicio c
+      LEFT JOIN tickets t ON c.id = t.categoria_id
+      ${modulo ? 'WHERE c.modulo = ?' : ''}
+      GROUP BY c.id, c.nombre
+      ORDER BY total DESC
+    `, moduloParams);
+
+    // 6. Volumen por urgencia
+    const [urgRows] = await dbPool.query<RowDataPacket[]>(`
+      SELECT 
+        urgencia,
+        COUNT(*) as total
+      FROM tickets
+      ${whereModulo}
+      GROUP BY urgencia
+    `, moduloParams);
+
+    return {
+      totalTickets: Number(metricsData.total || 0),
+      reportados: Number(metricsData.reportados || 0),
+      asignados: Number(metricsData.asignados || 0),
+      resueltos: Number(metricsData.resueltos || 0),
+      tiempoPromedioResolucionHoras: Number((Number(metricsData.avg_resolution_hours) || 0).toFixed(1)),
+      satisfaccionPromedio: Number(avgScore.toFixed(1)),
+      cumplimientoSlaPorcentaje: slaPercent,
+      cargaPorTecnico: techRows.map((tr) => ({
+        tecnicoId: tr.tecnicoId,
+        tecnicoNombre: tr.tecnicoNombre,
+        fotoPerfil: tr.fotoPerfil,
+        asignados: Number(tr.asignados || 0),
+        resueltos: Number(tr.resueltos || 0),
+        tiempoPromedioHoras: Number((Number(tr.tiempoPromedioHoras) || 0).toFixed(1)),
+        calificacionPromedio: Number((Number(tr.calificacionPromedio) || 0).toFixed(1)),
+      })),
+      volumenPorCategoria: catRows.map((cr) => ({
+        categoriaId: cr.categoriaId,
+        categoriaNombre: cr.categoriaNombre,
+        total: Number(cr.total || 0),
+      })),
+      volumenPorUrgencia: urgRows.map((ur) => ({
+        urgencia: ur.urgencia,
+        total: Number(ur.total || 0),
+      })),
+    };
+  }
+}
+

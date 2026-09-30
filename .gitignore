@@ -1,0 +1,46 @@
+# Dependencias
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Compilados y Bundles
+dist/
+*/dist/
+build/
+*/build/
+/assets/
+
+
+# Archivos de entorno y credenciales (CRÍTICO: No subir credenciales a GitHub)
+.env
+*.env
+.env.*
+!.env.example
+server/.env
+client/.env
+!config/.env.example
+
+# Archivos temporales y uploads
+uploads/*
+!uploads/.gitkeep
+server/uploads/*
+!server/uploads/.gitkeep
+logs/
+server/logs/*
+!server/logs/.gitkeep
+
+# Archivos de depuración y temporales locales
+scratch_*.js
+*.png.bak
+Thumbs.db
+[Aa]aaaa.png
+*.log
+
+# IDE y editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store

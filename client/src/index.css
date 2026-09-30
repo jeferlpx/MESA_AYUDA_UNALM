@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans;
+  }
+}
+
+/* Scrollbar estilizado para la tabla Kanban y chats */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.glass-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+}
+
+/* =========================================================
+   REGLAS DE IMPRESIÓN Y EXPORTACIÓN A PDF EJECUTIVO
+   ========================================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Ocultar elementos de navegación y herramientas */
+  header,
+  aside,
+  nav,
+  button,
+  .print\:hidden,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reseteo de scrolls y contenedores para que no se corte el documento */
+  html,
+  body,
+  #root,
+  .min-h-screen,
+  main {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Estilos para el contenedor del reporte imprimible */
+  .printable-report-wrapper {
+    position: static !important;
+    inset: auto !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  .printable-report-card {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .avoid-page-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* =========================================================
+     REGLAS EXCLUSIVAS PARA ORDEN DE TRABAJO (IMPRESIÓN / PDF)
+     ========================================================= */
+  body.has-work-order-open,
+  body.has-service-request-open,
+  body.has-attended-report-open {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.has-work-order-open *,
+  body.has-service-request-open *,
+  body.has-attended-report-open * {
+    visibility: hidden !important;
+  }
+
+  body.has-work-order-open .work-order-print-document,
+  body.has-work-order-open .work-order-print-document *,
+  body.has-service-request-open .service-request-print-document,
+  body.has-service-request-open .service-request-print-document *,
+  body.has-attended-report-open .attended-report-print-document,
+  body.has-attended-report-open .attended-report-print-document * {
+    visibility: visible !important;
+  }
+
+  body.has-work-order-open .work-order-print-document,
+  body.has-service-request-open .service-request-print-document,
+  body.has-attended-report-open .attended-report-print-document {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  body.has-work-order-open .work-order-print-document .border-slate-300,
+  body.has-service-request-open .service-request-print-document .border-slate-300,
+  body.has-attended-report-open .attended-report-print-document .border-slate-300 {
+    border-color: #cbd5e1 !important;
+  }
+
+  body.has-work-order-open .work-order-print-document .border-slate-900,
+  body.has-service-request-open .service-request-print-document .border-slate-900,
+  body.has-attended-report-open .attended-report-print-document .border-slate-900 {
+    border-color: #000000 !important;
+  }
+
+  body.has-work-order-open .work-order-print-document .bg-slate-50,
+  body.has-work-order-open .work-order-print-document .bg-slate-50\/50,
+  body.has-service-request-open .service-request-print-document .bg-slate-50,
+  body.has-service-request-open .service-request-print-document .bg-slate-50\/50,
+  body.has-attended-report-open .attended-report-print-document .bg-slate-50,
+  body.has-attended-report-open .attended-report-print-document .bg-slate-50\/50 {
+    background-color: #f8fafc !important;
+  }
+
+  body.has-work-order-open .work-order-print-document .bg-amber-50,
+  body.has-service-request-open .service-request-print-document .bg-amber-50,
+  body.has-attended-report-open .attended-report-print-document .bg-amber-50 {
+    background-color: #fffbeb !important;
+  }
+}
+
+

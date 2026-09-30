@@ -1,0 +1,1198 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { api, getAssetUrl } from '../services/api';
+import { Ticket, TicketAdjunto, TicketHistorial, TicketComment, Technician, TicketComplejidad } from '../types';
+import { StatusBadge, UrgencyBadge, ComplexityBadge } from '../components/Badge';
+import { TicketTimeline } from '../components/TicketTimeline';
+import { TechnicianProfileModal } from '../components/TechnicianProfileModal';
+import { ServiceRequestModal } from '../components/ServiceRequestModal';
+import { WorkOrderModal } from '../components/WorkOrderModal';
+import { SGFieldTimelineTracker } from '../components/SGFieldTimelineTracker';
+import { Modal } from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/Toast';
+
+import {
+  ArrowLeft,
+  Clock,
+  User,
+  Building2,
+  Phone,
+  Mail,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Wrench,
+  Paperclip,
+  Download,
+  Eye,
+  Upload,
+  Printer,
+  Star,
+  RotateCcw,
+  ShieldAlert,
+  Sparkles,
+  X,
+  PhoneCall,
+  MapPin,
+  Send,
+  AlertTriangle,
+  UserCheck,
+  MessageSquare,
+  RefreshCw,
+} from 'lucide-react';
+
+interface TicketDetailPageProps {
+  ticketId: number;
+  onBack: () => void;
+}
+
+export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, onBack }) => {
+  const { user } = useAuth();
+  const toast = useToast();
+
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [adjuntos, setAdjuntos] = useState<TicketAdjunto[]>([]);
+  const [historial, setHistorial] = useState<TicketHistorial[]>([]);
+  const [comments, setComments] = useState<TicketComment[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Observation Chat State
+  const [nuevoMensajeChat, setNuevoMensajeChat] = useState<string>('');
+  const [archivoChat, setArchivoChat] = useState<File | null>(null);
+  const [archivoChatPreview, setArchivoChatPreview] = useState<string | null>(null);
+  const [enviandoChat, setEnviandoChat] = useState<boolean>(false);
+
+  // Assignment Modal State (For Mesa de Ayuda in observation panel)
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState<boolean>(false);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [selectedTechId, setSelectedTechId] = useState<number | ''>('');
+  const [selectedComplexity, setSelectedComplexity] = useState<TicketComplejidad>('BAJA');
+  const [submittingAssign, setSubmittingAssign] = useState<boolean>(false);
+
+  // Resolution Modal State (For assigned technician)
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+  const [solucionDetalle, setSolucionDetalle] = useState('');
+  const [materialesUsados, setMaterialesUsados] = useState('');
+  const [materialesSobrantes, setMaterialesSobrantes] = useState('');
+  const [submittingResolution, setSubmittingResolution] = useState(false);
+
+  // Upload more attachments
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  // Lightbox modal for image attachments
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Technician profile modal
+  const [selectedTechProfileId, setSelectedTechProfileId] = useState<number | null>(null);
+
+  // Official SG Modals
+  const [showServiceRequestModal, setShowServiceRequestModal] = useState(false);
+  const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
+
+  // Deduplicate attachments by name + size
+  const uniqueAdjuntos = useMemo(() => {
+    const seen = new Set<string>();
+    return adjuntos.filter((a) => {
+      const key = `${a.nombre_original}_${a.tamano_bytes}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [adjuntos]);
+
+  const loadTicketData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.getTicketById(ticketId);
+      if (res.success && res.data) {
+        setTicket(res.data.ticket);
+        setComments(res.data.comments || []);
+        const rawAdjuntos = res.data.adjuntos || res.data.attachments || [];
+        setAdjuntos(
+          rawAdjuntos.map((a: any) => {
+            let cleanPath = (a.nombre_guardado ? `uploads/${a.nombre_guardado}` : (a.ruta_servidor || a.ruta_archivo || '')).replace(/\\/g, '/');
+            const idx = cleanPath.indexOf('uploads/');
+            if (idx !== -1) cleanPath = cleanPath.substring(idx);
+            return {
+              ...a,
+              ruta_servidor: cleanPath,
+              ruta_archivo: cleanPath,
+            };
+          })
+        );
+        const rawHistorial = res.data.historial || res.data.auditLogs || [];
+        setHistorial(
+          rawHistorial.map((ev: any, idx: number) => ({
+            id: ev.id || idx + 1,
+            ticket_id: ev.ticket_id || ticketId,
+            evento: ev.evento || ev.accion || 'Actualización de Requerimiento',
+            detalles: ev.detalles || ev.valor_nuevo || '',
+            usuario_nombre: ev.usuario_nombre || 'Sistema',
+            creado_en: ev.creado_en || ev.fecha || new Date().toISOString(),
+          }))
+        );
+
+        // Si el usuario es Mesa de Ayuda o Admin, cargar especialistas técnicos disponibles
+        if (['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user?.rol || '')) {
+          api.getTechnicians(res.data.ticket?.modulo ? { modulo: res.data.ticket.modulo } : undefined)
+            .then((techRes) => {
+              if (techRes.success) setTechnicians(techRes.data);
+            })
+            .catch(() => {});
+        }
+      } else {
+        setError('No se pudo cargar la información del requerimiento');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Error al obtener detalle del requerimiento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (ticketId) {
+      loadTicketData();
+
+      // Auto-actualizar mensajes del chat en tiempo real cada 6 segundos
+      const interval = setInterval(() => {
+        api.getTicketById(ticketId).then((res) => {
+          if (res.success && res.data) {
+            if (res.data.comments) setComments(res.data.comments);
+            if (res.data.ticket) setTicket(res.data.ticket);
+          }
+        }).catch(() => {});
+      }, 6000);
+
+      return () => clearInterval(interval);
+    }
+  }, [ticketId]);
+
+  const handleEnviarMensajeChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoMensajeChat.trim()) return;
+
+    setEnviandoChat(true);
+    try {
+      const formData = new FormData();
+      formData.append('mensaje', nuevoMensajeChat.trim());
+      // No enviar esNotaInterna para que el backend lo guarde siempre como comentario público (es_nota_interna = 0)
+      if (archivoChat) {
+        formData.append('file', archivoChat);
+      }
+
+      const res = await api.addComment(ticketId, formData);
+      if (res.success) {
+        setNuevoMensajeChat('');
+        setArchivoChat(null);
+        setArchivoChatPreview(null);
+        toast.success('Mensaje registrado en la observación.');
+        await loadTicketData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al enviar mensaje');
+    } finally {
+      setEnviandoChat(false);
+    }
+  };
+
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTechId) return;
+
+    setSubmittingAssign(true);
+    try {
+      const res = await api.assignTechnician(ticketId, Number(selectedTechId), selectedComplexity);
+      if (res.success) {
+        toast.success('Técnico especialista asignado exitosamente.', 'Ticket Asignado');
+        setIsAssignModalOpen(false);
+        await loadTicketData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al asignar especialista');
+    } finally {
+      setSubmittingAssign(false);
+    }
+  };
+
+  const handleResolveTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!solucionDetalle.trim()) {
+      toast.error('Debe ingresar el informe o descripción de la solución técnica aplicada.');
+      return;
+    }
+
+    setSubmittingResolution(true);
+    try {
+      const res = await api.updateTicketStatus(ticketId, {
+        estado: 'RESUELTO',
+        solucionDetalle: solucionDetalle.trim(),
+        materialesUsados: materialesUsados.trim() || undefined,
+        materialesSobrantes: materialesSobrantes.trim() || undefined,
+      });
+
+      if (res.success) {
+        toast.success('El ticket ha sido marcado como RESUELTO exitosamente.', 'Atención Concluida');
+        setIsResolveModalOpen(false);
+        setSolucionDetalle('');
+        await loadTicketData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al registrar la resolución técnica');
+    } finally {
+      setSubmittingResolution(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+
+    const formData = new FormData();
+    files.forEach((f) => formData.append('files', f));
+    formData.append('file', files[0]);
+
+    setUploadingFiles(true);
+    try {
+      const res = await api.uploadTicketAttachments(ticketId, formData);
+      if (res.success) {
+        toast.success('Archivos adjuntos subidos correctamente.');
+        await loadTicketData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al subir archivos adjuntos');
+    } finally {
+      setUploadingFiles(false);
+      e.target.value = '';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-6 animate-pulse">
+        <div className="h-10 bg-slate-200 rounded-2xl w-1/4" />
+        <div className="h-44 bg-slate-200 rounded-3xl" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 h-96 bg-slate-200 rounded-3xl" />
+          <div className="h-96 bg-slate-200 rounded-3xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !ticket) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-extrabold text-slate-900">Requerimiento no encontrado</h2>
+        <p className="text-xs text-slate-500">{error || 'El ticket solicitado no existe o fue eliminado.'}</p>
+        <button
+          onClick={onBack}
+          className="px-5 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors inline-flex items-center space-x-2 cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Volver al Listado</span>
+        </button>
+      </div>
+    );
+  }
+
+  const isSG = ticket.modulo === 'SERVICIOS_GENERALES';
+  const isAssignedTech = Boolean(user && ticket.tecnico_id === user.id);
+  const canResolve = (user?.rol === 'TECNICO' || user?.rol === 'TECNICO_SG') && isAssignedTech && ticket.estado !== 'RESUELTO';
+  const isObservado = Boolean(
+    ticket && (ticket.estado === 'OBSERVADO' || comments.some((c) => c.mensaje.includes('[OBSERVACIÓN') || c.mensaje.includes('[OBSERVACION')))
+  );
+  const isMesaAyudaOrAdmin = Boolean(
+    user?.rol && ['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol)
+  );
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      {/* Top Navigation & Breadcrumb */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-500" />
+          <span>Volver a la Cola</span>
+        </button>
+
+        <div className="flex items-center space-x-2">
+          {/* Documentos oficiales para Servicios Generales */}
+          {isSG && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowServiceRequestModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer"
+                title="Generar Formato de Solicitud de Servicio (SG)"
+              >
+                <Printer className="w-3.5 h-3.5 text-amber-700" />
+                <span>Solicitud SG</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowWorkOrderModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+                title="Generar Orden de Trabajo Oficial (SG)"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Orden de Trabajo</span>
+              </button>
+            </>
+          )}
+
+          {/* Botón Resolver para el técnico asignado */}
+          {canResolve && (
+            <button
+              onClick={() => setIsResolveModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Resolver y Cerrar Atención</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Ticket Banner Header */}
+      <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`font-mono text-sm font-black px-3 py-1 rounded-xl border ${
+              isSG ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-unalm-50 text-unalm-700 border-unalm-300'
+            }`}>
+              {ticket.codigo_correlativo}
+            </span>
+            <StatusBadge status={ticket.estado} />
+            <UrgencyBadge urgency={ticket.urgencia} />
+            <ComplexityBadge complexity={ticket.complejidad || 'BAJA'} />
+            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-xl">
+              {ticket.categoria_nombre}
+            </span>
+            <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border ${
+              isSG ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}>
+              {isSG ? '🏗️ Servicios Generales' : '💻 Tecnologías de Información (OTIC)'}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
+            <Clock className="w-4 h-4 text-slate-400" />
+            <span>
+              Registrado el {new Date(ticket.fecha_apertura).toLocaleDateString('es-PE', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
+        </div>
+
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
+          {ticket.titulo}
+        </h1>
+
+        {/* SLA Timeline representation */}
+        <div className="pt-2 border-t border-slate-100">
+          <TicketTimeline
+            status={ticket.estado}
+            fechaApertura={ticket.fecha_apertura}
+            fechaPrimeraRespuesta={ticket.fecha_primera_respuesta}
+            fechaResolucion={ticket.fecha_resolucion}
+          />
+        </div>
+      </div>
+
+      {/* Panel Exclusivo: Chat / Hilo de Observación y Aclaración (Solo si fue observado) */}
+      {isObservado && (
+        <div className="bg-gradient-to-br from-amber-500/10 via-amber-50/40 to-orange-50/20 border-2 border-amber-300 rounded-3xl p-6 sm:p-7 shadow-xs space-y-4 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-200/80 pb-4">
+            <div className="flex items-center space-x-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-base sm:text-lg font-black text-amber-950">
+                    Hilo de Observación & Aclaración con Mesa de Ayuda
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-2xs">
+                    {ticket.estado === 'OBSERVADO' ? 'ACLARACIÓN PENDIENTE' : 'OBSERVADO'}
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                  Canal directo entre la Mesa de Ayuda y el Solicitante para resolver consultas e información previa a la asignación técnica.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 self-start sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={loadTicketData}
+                className="px-3 py-2 bg-amber-100/80 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 transition-all flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                title="Actualizar mensajes del chat"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Actualizar</span>
+              </button>
+
+              {/* Si es Mesa de Ayuda o Admin, botón para asignar especialista (solo si NO está en OBSERVADO) */}
+              {isMesaAyudaOrAdmin && ticket.estado !== 'OBSERVADO' && (
+                <button
+                  type="button"
+                  onClick={() => setIsAssignModalOpen(true)}
+                  className="px-4 py-2 bg-unalm-600 hover:bg-unalm-700 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center space-x-2 shrink-0 cursor-pointer"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>Asignar Especialista Técnico</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Hilo de Mensajes */}
+          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
+            {comments.length === 0 ? (
+              <div className="p-6 text-center text-xs text-amber-800 italic bg-white/70 rounded-2xl border border-amber-200">
+                No se registran mensajes en el hilo de observación.
+              </div>
+            ) : (
+              comments.map((comm) => {
+                const isHelpdesk = ['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(comm.usuario_rol);
+                const isMe = user?.id === comm.usuario_id;
+                const commentAdjuntos = uniqueAdjuntos.filter((a) => a.comentario_id === comm.id);
+
+                return (
+                  <div
+                    key={comm.id}
+                    className={`flex flex-col space-y-1.5 p-4 rounded-2xl border shadow-2xs transition-all ${
+                      isHelpdesk
+                        ? 'bg-amber-50/90 border-amber-200 text-amber-950'
+                        : 'bg-white border-slate-200 text-slate-900'
+                    } ${isMe ? 'ring-1 ring-amber-400/60' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shadow-2xs ${
+                          isHelpdesk ? 'bg-amber-600 text-white' : 'bg-slate-700 text-white'
+                        }`}>
+                          {comm.usuario_nombre.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="font-extrabold text-xs">
+                          {comm.usuario_nombre}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isHelpdesk
+                            ? 'bg-amber-200/80 text-amber-900 border border-amber-300'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          {isHelpdesk ? 'Mesa de Ayuda' : 'Solicitante'}
+                        </span>
+                      </div>
+
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(comm.creado_en).toLocaleString('es-PE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="text-xs leading-relaxed whitespace-pre-wrap pl-8">
+                      {comm.mensaje}
+                    </div>
+
+                    {/* Adjuntos vinculados al comentario */}
+                    {commentAdjuntos.length > 0 && (
+                      <div className="pl-8 pt-2 flex flex-wrap gap-2">
+                        {commentAdjuntos.map((adj) => {
+                          const isImg = Boolean(adj.mime_type && adj.mime_type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif)$/i.test(adj.ruta_archivo || adj.ruta_servidor || '');
+                          const url = getAssetUrl(adj.ruta_archivo || adj.ruta_servidor);
+                          return (
+                            <div
+                              key={adj.id}
+                              className="flex items-center space-x-2 bg-white/95 p-2 rounded-xl border border-slate-200 text-xs shadow-2xs"
+                            >
+                              {isImg ? (
+                                <img
+                                  src={url}
+                                  alt={adj.nombre_original}
+                                  onClick={() => setPreviewImage(url)}
+                                  className="w-8 h-8 rounded-lg object-cover cursor-pointer border border-slate-200"
+                                  title="Clic para ampliar imagen"
+                                />
+                              ) : (
+                                <FileText className="w-5 h-5 text-slate-500" />
+                              )}
+                              <span className="font-semibold text-slate-800 truncate max-w-[160px]" title={adj.nombre_original}>
+                                {adj.nombre_original}
+                              </span>
+                              <a
+                                href={url}
+                                download={adj.nombre_original}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1 hover:bg-slate-100 rounded text-unalm-600"
+                                title="Descargar"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Formulario para Enviar Respuesta / Aclaración */}
+          <form onSubmit={handleEnviarMensajeChat} className="space-y-3 pt-3 border-t border-amber-200">
+            <div className="relative">
+              <textarea
+                rows={3}
+                required
+                value={nuevoMensajeChat}
+                onChange={(e) => setNuevoMensajeChat(e.target.value)}
+                placeholder={
+                  user?.rol === 'SOLICITANTE'
+                    ? 'Escribe tu respuesta o aclaración a la observación de Mesa de Ayuda aquí...'
+                    : 'Escribe tu consulta o aclaración al usuario solicitante...'
+                }
+                className="w-full p-3.5 bg-white border border-amber-300 rounded-2xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium placeholder:text-slate-400 shadow-2xs"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center space-x-2">
+                <label className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 shadow-2xs flex items-center space-x-1.5 cursor-pointer transition-colors">
+                  <Paperclip className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{archivoChat ? 'Cambiar archivo' : 'Adjuntar foto o evidencia'}</span>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const file = e.target.files[0];
+                        setArchivoChat(file);
+                        if (file.type.startsWith('image/')) {
+                          setArchivoChatPreview(URL.createObjectURL(file));
+                        } else {
+                          setArchivoChatPreview(null);
+                        }
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+
+                {archivoChat && (
+                  <div className="flex items-center space-x-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-200 text-xs text-slate-700">
+                    <span className="font-medium truncate max-w-[140px]">{archivoChat.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setArchivoChat(null);
+                        setArchivoChatPreview(null);
+                      }}
+                      className="text-rose-500 hover:text-rose-700 p-0.5"
+                      title="Quitar"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                {archivoChatPreview && (
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-300 shrink-0">
+                    <img src={archivoChatPreview} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={enviandoChat || !nuevoMensajeChat.trim()}
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-extrabold shadow-md transition-all flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {enviandoChat ? (
+                  <span>Enviando...</span>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Enviar Respuesta</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Grid: 2 Columns Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left / Main Column: Details, Description, Attachments, Resolution */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Solicitante Card */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2 border-b border-slate-100 pb-2">
+              <User className="w-4 h-4 text-unalm-600" />
+              <span>Datos del Usuario Solicitante</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-slate-400 font-bold block text-[11px]">Nombres & Apellidos:</span>
+                <span className="font-bold text-slate-900 text-sm">{ticket.solicitante_nombre}</span>
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-bold block text-[11px]">Dependencia / Facultad:</span>
+                <span className="font-bold text-slate-800">{ticket.solicitante_dependencia || 'Campus Universitario UNALM'}</span>
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-bold block text-[11px]">Correo Institucional:</span>
+                <span className="font-semibold text-slate-700">{ticket.solicitante_email || 'No registrado'}</span>
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-bold block text-[11px]">Celular & Anexo:</span>
+                <span className="font-semibold text-slate-700">
+                  {ticket.solicitante_telefono || 'Sin celular registrado'}
+                  {ticket.solicitante_anexo ? ` (Anexo: ${ticket.solicitante_anexo})` : ''}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Description and Location Details */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2 border-b border-slate-100 pb-2">
+              <FileText className="w-4 h-4 text-unalm-600" />
+              <span>Detalle del Requerimiento & Ubicación</span>
+            </h3>
+
+            <div className="space-y-3">
+              <div>
+                <span className="text-slate-400 font-bold block text-[11px] mb-1">Descripción:</span>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-800 font-medium leading-relaxed whitespace-pre-line">
+                  {ticket.descripcion}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-slate-400 font-bold block text-[11px]">Ubicación Institucional:</span>
+                  <div className="flex items-center space-x-1.5 mt-0.5">
+                    <Building2 className="w-3.5 h-3.5 text-unalm-600 shrink-0" />
+                    <span className="font-bold text-slate-800">{ticket.ubicacion_oficina || ticket.solicitante_dependencia || 'Campus Universitario UNALM'}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-slate-400 font-bold block text-[11px]">Referencia de Ubicación del Incidente:</span>
+                  <div className="flex items-center space-x-1.5 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-unalm-600 shrink-0" />
+                    <span className="font-bold text-slate-800">{ticket.referencia_ubicacion || 'No especificada'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SG Field Details (If SG) */}
+              {isSG && (
+                <div className="mt-3 p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-3">
+                  <span className="text-xs font-black text-amber-900 uppercase tracking-wider block">
+                    🏗️ Logística Operativa en Terreno (Servicios Generales)
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-500 font-bold block text-[11px]">Contacto en Ambiente:</span>
+                      <span className="font-bold text-slate-800">{ticket.contacto_local || 'Mismo solicitante'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-500 font-bold block text-[11px]">Horario de Acceso:</span>
+                      <span className="font-bold text-slate-800">{ticket.horario_acceso || 'Horario regular de oficina'}</span>
+                    </div>
+
+                    {ticket.subtipo_intervencion && (
+                      <div>
+                        <span className="text-slate-500 font-bold block text-[11px]">Subtipo de Intervención:</span>
+                        <span className="font-bold text-slate-800">{ticket.subtipo_intervencion}</span>
+                      </div>
+                    )}
+
+                    {ticket.materiales_usados && (
+                      <div className="sm:col-span-2">
+                        <span className="text-slate-500 font-bold block text-[11px]">Materiales / Repuestos Utilizados:</span>
+                        <span className="font-semibold text-slate-800">{ticket.materiales_usados}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Solution Report Card (If RESUELTO) */}
+          {ticket.estado === 'RESUELTO' && ticket.solucion_detalle && (
+            <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-3xl shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Informe de Solución Técnica Concluida</span>
+                </h3>
+                {ticket.fecha_resolucion && (
+                  <span className="text-[11px] text-emerald-800 font-mono font-bold">
+                    {new Date(ticket.fecha_resolucion).toLocaleString('es-PE')}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-emerald-950 font-medium leading-relaxed whitespace-pre-line bg-white/80 p-4 rounded-2xl border border-emerald-200">
+                {ticket.solucion_detalle}
+              </p>
+
+              {ticket.materiales_usados && (
+                <div className="text-xs text-emerald-900">
+                  <strong className="font-bold">Materiales / Repuestos Aplicados: </strong>
+                  <span>{ticket.materiales_usados}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Attachments & Evidences */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2">
+                <Paperclip className="w-4 h-4 text-unalm-600" />
+                <span>Archivos Adjuntos & Evidencias ({uniqueAdjuntos.length})</span>
+              </h3>
+
+              <label className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 cursor-pointer">
+                <Upload className="w-3.5 h-3.5 text-unalm-600" />
+                <span>{uploadingFiles ? 'Subiendo...' : '+ Adjuntar archivos'}</span>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  disabled={uploadingFiles}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {uniqueAdjuntos.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-3 text-center">
+                No se adjuntaron archivos a este requerimiento. Puede agregar fotos o documentos usando el botón "+ Adjuntar archivos".
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {uniqueAdjuntos.map((adj) => {
+                  const isImage = Boolean(adj.mime_type && adj.mime_type.startsWith('image/')) || /\.(jpg|jpeg|png|webp|gif)$/i.test(adj.ruta_archivo || adj.ruta_servidor || '');
+                  const fullUrl = getAssetUrl(adj.ruta_archivo || adj.ruta_servidor);
+                  return (
+                    <div
+                      key={adj.id}
+                      className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-3 group hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-center space-x-2.5 truncate">
+                        {isImage ? (
+                          <div
+                            onClick={() => setPreviewImage(fullUrl)}
+                            className="w-10 h-10 rounded-xl overflow-hidden bg-slate-200 shrink-0 cursor-pointer border border-slate-300"
+                            title="Ver imagen completa"
+                          >
+                            <img src={fullUrl} alt={adj.nombre_original} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center shrink-0 text-slate-600">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                        )}
+
+                        <div className="truncate">
+                          <p className="text-xs font-bold text-slate-800 truncate" title={adj.nombre_original}>
+                            {adj.nombre_original}
+                          </p>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {(adj.tamano_bytes / 1024).toFixed(1)} KB
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-1 shrink-0">
+                        {isImage && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewImage(fullUrl)}
+                            className="p-1.5 hover:bg-white rounded-lg text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                            title="Vista previa"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                        <a
+                          href={fullUrl}
+                          download={adj.nombre_original}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 hover:bg-white rounded-lg text-unalm-600 hover:text-unalm-800 transition-colors cursor-pointer"
+                          title="Descargar archivo"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Técnico Asignado & Trazabilidad / Historial */}
+        <div className="space-y-6">
+          {/* Técnico Especialista Card */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2 border-b border-slate-100 pb-2">
+              <Wrench className="w-4 h-4 text-unalm-600" />
+              <span>Especialista Asignado</span>
+            </h3>
+
+            {ticket.tecnico_id && ticket.tecnico_nombre ? (
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  {ticket.tecnico_foto ? (
+                    <img
+                      src={getAssetUrl(ticket.tecnico_foto)}
+                      alt={ticket.tecnico_nombre}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-amber-300 shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-unalm-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                      {ticket.tecnico_nombre.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 text-sm">{ticket.tecnico_nombre}</h4>
+                    <span className="text-[10px] font-extrabold text-unalm-700 bg-unalm-50 border border-unalm-200 px-2 py-0.5 rounded-full inline-block mt-0.5">
+                      {isSG ? 'Especialista Serv. Generales' : 'Técnico Especialista OTIC'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 text-xs text-slate-600 space-y-1.5 font-medium">
+                  {ticket.tecnico_email && (
+                    <div className="flex items-center space-x-2 truncate">
+                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{ticket.tecnico_email}</span>
+                    </div>
+                  )}
+                  {ticket.tecnico_telefono && (
+                    <div className="flex items-center space-x-2">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{ticket.tecnico_telefono}</span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTechProfileId(ticket.tecnico_id!)}
+                  className="w-full mt-2 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-unalm-600" />
+                  <span>Ver Récord del Especialista</span>
+                </button>
+              </div>
+            ) : ticket.estado === 'OBSERVADO' ? (
+              <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50/60 rounded-2xl border-2 border-amber-300 text-center space-y-2 shadow-xs animate-in fade-in">
+                <AlertTriangle className="w-8 h-8 text-amber-600 mx-auto" />
+                <p className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                  Ticket en Observación por Mesa de Ayuda
+                </p>
+                <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
+                  La Mesa de Ayuda ha observado su requerimiento y solicita aclaraciones o evidencias adicionales para proceder con la asignación técnica. Por favor responda en el recuadro de aclaración a la izquierda.
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-center space-y-2">
+                <Clock className="w-8 h-8 text-amber-500 mx-auto" />
+                <p className="text-xs font-bold text-amber-900">Pendiente de Asignación</p>
+                <p className="text-[11px] text-amber-700">
+                  La Mesa de Ayuda asignará un especialista técnico en breve según disponibilidad.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Historial / Trazabilidad & Línea de Vida */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2 border-b border-slate-100 pb-2">
+              <Clock className="w-4 h-4 text-unalm-600" />
+              <span>Trazabilidad & Línea de Vida</span>
+            </h3>
+
+            {historial.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-2 text-center">
+                Apertura inicial del requerimiento registrada en el sistema.
+              </p>
+            ) : (
+              <div className="space-y-4 relative before:absolute before:top-2 before:bottom-2 before:left-3 before:w-0.5 before:bg-slate-200">
+                {historial.map((ev) => (
+                  <div key={ev.id} className="relative pl-7 text-xs space-y-1">
+                    <div className="absolute left-1.5 top-1 w-3.5 h-3.5 rounded-full bg-unalm-600 border-2 border-white shadow-2xs" />
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">{ev.evento}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(ev.creado_en).toLocaleDateString('es-PE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    {ev.usuario_nombre && (
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        Por: {ev.usuario_nombre}
+                      </p>
+                    )}
+                    {ev.detalles && (
+                      <p className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-200 leading-relaxed">
+                        {ev.detalles}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal: Resolver Ticket (Solo para técnico asignado) */}
+      {isResolveModalOpen && (
+        <Modal
+          isOpen={isResolveModalOpen}
+          onClose={() => setIsResolveModalOpen(false)}
+          title="Resolución Técnica del Requerimiento"
+          subtitle="Registre el informe técnico del trabajo realizado para dar por concluido el ticket."
+          maxWidth="lg"
+        >
+          <form onSubmit={handleResolveTicket} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Informe de Solución Técnica / Trabajo Realizado *
+              </label>
+              <textarea
+                required
+                rows={4}
+                value={solucionDetalle}
+                onChange={(e) => setSolucionDetalle(e.target.value)}
+                placeholder="Describa en detalle las acciones técnicas ejecutadas, diagnósticos, pruebas o repuestos instalados..."
+                className="w-full p-3 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium"
+              />
+            </div>
+
+            {isSG && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Materiales / Insumos Utilizados (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={materialesUsados}
+                    onChange={(e) => setMaterialesUsados(e.target.value)}
+                    placeholder="Ej: 2 tubos fluorescentes, 5m cable"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Materiales Sobrantes / Devueltos (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={materialesSobrantes}
+                    onChange={(e) => setMaterialesSobrantes(e.target.value)}
+                    placeholder="Ej: 1m cable sobrante"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsResolveModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={submittingResolution}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {submittingResolution ? (
+                  <span>Guardando resolución...</span>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Confirmar y Resolver Ticket</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Lightbox Preview Modal for Images */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors cursor-pointer z-10"
+              title="Cerrar (X)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={previewImage}
+              alt="Evidencia ampliada"
+              className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/20"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Official SG Modals */}
+      {showServiceRequestModal && (
+        <ServiceRequestModal
+          isOpen={showServiceRequestModal}
+          onClose={() => setShowServiceRequestModal(false)}
+          ticket={ticket}
+        />
+      )}
+
+      {showWorkOrderModal && (
+        <WorkOrderModal
+          isOpen={showWorkOrderModal}
+          onClose={() => setShowWorkOrderModal(false)}
+          ticket={ticket}
+        />
+      )}
+
+      {/* Technician Profile Modal */}
+      {selectedTechProfileId && (
+        <TechnicianProfileModal
+          isOpen={Boolean(selectedTechProfileId)}
+          onClose={() => setSelectedTechProfileId(null)}
+          technicianId={selectedTechProfileId}
+        />
+      )}
+
+      {/* Modal: Asignar Especialista Técnico (Mesa de Ayuda) */}
+      {isAssignModalOpen && (
+        <Modal
+          isOpen={isAssignModalOpen}
+          onClose={() => setIsAssignModalOpen(false)}
+          title={`Asignar Especialista: ${ticket.codigo_correlativo}`}
+          subtitle="Seleccione el técnico especialista y el nivel de complejidad para iniciar la atención técnica."
+          maxWidth="md"
+        >
+          <form onSubmit={handleAssignSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Técnico Especialista Destinado *
+              </label>
+              <select
+                required
+                value={selectedTechId}
+                onChange={(e) => setSelectedTechId(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold"
+              >
+                <option value="">-- Seleccione un especialista --</option>
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombres} {t.apellidos} {t.especialidad ? `(${t.especialidad})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Nivel de Complejidad Técnica
+              </label>
+              <select
+                value={selectedComplexity}
+                onChange={(e) => setSelectedComplexity(e.target.value as TicketComplejidad)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold"
+              >
+                <option value="BAJA">Baja (Resolución rápida estándar)</option>
+                <option value="MEDIA">Media (Intervención técnica programada)</option>
+                <option value="ALTA">Alta (Diagnóstico especializado / Campo)</option>
+                <option value="COMPLEJA">Compleja / Crítica (Servicio de alto impacto)</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsAssignModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={submittingAssign || !selectedTechId}
+                className="px-5 py-2 bg-unalm-600 hover:bg-unalm-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {submittingAssign ? (
+                  <span>Asignando...</span>
+                ) : (
+                  <>
+                    <UserCheck className="w-4 h-4" />
+                    <span>Confirmar Asignación</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+};
