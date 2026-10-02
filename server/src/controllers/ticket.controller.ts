@@ -55,8 +55,12 @@ export class TicketController {
       }
 
       // Restricción para Técnicos: solo pueden ver tickets que les han sido asignados
-      if (['TECNICO', 'TECNICO_SG'].includes(req.user.rol) && ticket.tecnico_id !== req.user.id) {
-        return res.status(403).json({ success: false, message: 'No tiene permiso para ver tickets no asignados a su persona' });
+      if (['TECNICO', 'TECNICO_SG'].includes(req.user.rol)) {
+        const userId = req.user.id;
+        const isAssigned = ticket.tecnico_id === userId || (ticket.tecnicos_asignados && ticket.tecnicos_asignados.some((a) => a.id === userId));
+        if (!isAssigned) {
+          return res.status(403).json({ success: false, message: 'No tiene permiso para ver tickets no asignados a su persona' });
+        }
       }
 
       // Restricción para Mesa de Ayuda por área
@@ -381,7 +385,9 @@ export class TicketController {
         }
 
         if (['TECNICO', 'TECNICO_SG'].includes(req.user.rol)) {
-          if (!ticket.tecnico_id || ticket.tecnico_id !== req.user.id) {
+          const userId = req.user.id;
+          const isAssigned = ticket.tecnico_id === userId || (ticket.tecnicos_asignados && ticket.tecnicos_asignados.some((a) => a.id === userId));
+          if (!isAssigned) {
             return res.status(403).json({
               success: false,
               message: 'Solo el técnico especialista designado para este ticket puede marcarlo como resuelto.',
@@ -398,6 +404,36 @@ export class TicketController {
         materialesUsados,
         materialesSobrantes
       );
+
+      // Procesar informe técnico o documento adjunto opcional
+      const uploadedFiles: Express.Multer.File[] = [];
+      if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+        uploadedFiles.push(...req.files);
+      } else if (req.file) {
+        uploadedFiles.push(req.file);
+      }
+
+      for (const f of uploadedFiles) {
+        await TicketModel.addAttachment({
+          ticketId,
+          comentarioId: undefined,
+          nombreOriginal: f.originalname,
+          nombreGuardado: f.filename,
+          rutaServidor: f.path,
+          tamanoBytes: f.size,
+          mimeType: f.mimetype,
+          subidoPorId: req.user.id,
+        });
+
+        await TicketModel.logAudit({
+          ticketId,
+          usuarioId: req.user.id,
+          accion: 'ADJUNTAR_ARCHIVO',
+          campoModificado: 'adjunto_resolucion',
+          valorNuevo: `Informe técnico / documento adjunto: ${f.originalname}`,
+          ipOrigen: req.ip,
+        });
+      }
 
       if (comentario) {
         await TicketModel.addComment({
@@ -463,7 +499,7 @@ export class TicketController {
       }
 
       const ticketId = parseInt(req.params.id, 10);
-      const { tecnicoId, complejidad } = req.body;
+      const { tecnicoId, complejidad, tecnicosAdicionalesIds } = req.body;
 
       if (!tecnicoId) return res.status(400).json({ success: false, message: 'Se requiere seleccionar el técnico especialista' });
 
@@ -479,12 +515,34 @@ export class TicketController {
       }
 
       const comp: TicketComplejidad = complejidad || 'BAJA';
-      await TicketModel.assignTechnicianWithComplexity(ticketId, parseInt(tecnicoId, 10), comp);
+
+      // REGLA: Designación múltiple solo para Mesa de Ayuda OTIC cuando la complejidad es COMPLEJA
+      let parsedAdicionales: number[] = [];
+      if (ticket.modulo === 'OTIC' && comp === 'COMPLEJA' && Array.isArray(tecnicosAdicionalesIds)) {
+        parsedAdicionales = tecnicosAdicionalesIds
+          .map((id: any) => parseInt(id, 10))
+          .filter((id: number) => !isNaN(id) && id !== parseInt(tecnicoId, 10));
+        parsedAdicionales = Array.from(new Set(parsedAdicionales));
+      }
+
+      await TicketModel.assignTechnicianWithComplexity(ticketId, parseInt(tecnicoId, 10), comp, parsedAdicionales);
 
       const assignedTecUser = await UserModel.findById(parseInt(tecnicoId, 10));
       const assignedTecName = assignedTecUser
         ? `${assignedTecUser.nombres} ${assignedTecUser.apellidos}`
         : `Técnico ID ${tecnicoId}`;
+
+      let additionalNamesText = '';
+      const additionalUsersList: any[] = [];
+      if (parsedAdicionales.length > 0) {
+        const addUsers = await Promise.all(parsedAdicionales.map((id) => UserModel.findById(id)));
+        for (const u of addUsers) {
+          if (u) additionalUsersList.push(u);
+        }
+        if (additionalUsersList.length > 0) {
+          additionalNamesText = ` | Técnicos de Apoyo: ${additionalUsersList.map((u) => `${u.nombres} ${u.apellidos}`).join(', ')}`;
+        }
+      }
 
       await TicketModel.logAudit({
         ticketId,
@@ -492,11 +550,11 @@ export class TicketController {
         accion: 'ASIGNACION_TECNICO',
         campoModificado: 'tecnico_id',
         valorAnterior: ticket.tecnico_nombre || 'Sin Asignar',
-        valorNuevo: `Asignado al Especialista ${assignedTecName} | Complejidad: ${comp}`,
+        valorNuevo: `Asignado al Especialista ${assignedTecName}${additionalNamesText} | Complejidad: ${comp}`,
         ipOrigen: req.ip,
       });
 
-      // Disparar notificaciones por correo de asignación (al técnico y al solicitante)
+      // Disparar notificaciones por correo de asignación (al técnico principal, adicionales y al solicitante)
       (async () => {
         try {
           const [tecnicoUser, solicitanteUser] = await Promise.all([
@@ -526,6 +584,31 @@ export class TicketController {
                 facultadDependencia: solicitanteUser.facultad_dependencia,
               }
             ).catch((err) => console.error('[EmailService assignTicket error]:', err));
+
+            // Notificar a técnicos adicionales de apoyo si los hay
+            for (const coTec of additionalUsersList) {
+              EmailService.notificarAsignacionTecnico(
+                {
+                  id: ticketId,
+                  codigo_correlativo: ticket.codigo_correlativo,
+                  titulo: `${ticket.titulo} (Equipo de Apoyo Técnico)`,
+                  descripcion: ticket.descripcion,
+                  complejidad: comp,
+                },
+                {
+                  nombres: coTec.nombres,
+                  apellidos: coTec.apellidos,
+                  email: coTec.email,
+                  facultadDependencia: coTec.facultad_dependencia,
+                },
+                {
+                  nombres: solicitanteUser.nombres,
+                  apellidos: solicitanteUser.apellidos,
+                  email: solicitanteUser.email,
+                  facultadDependencia: solicitanteUser.facultad_dependencia,
+                }
+              ).catch((err) => console.error('[EmailService assignTicket coTec error]:', err));
+            }
           }
         } catch (err) {
           console.error('[EmailService assignTicket background error]:', err);
@@ -659,7 +742,7 @@ export class TicketController {
       }
 
       const ticketId = parseInt(req.params.id, 10);
-      const { nuevoTecnicoId, nuevaCategoriaId, nuevaComplejidad, motivo } = req.body;
+      const { nuevoTecnicoId, nuevaCategoriaId, nuevaComplejidad, motivo, nuevosTecnicosAdicionalesIds } = req.body;
 
       if (!nuevoTecnicoId) {
         return res.status(400).json({ success: false, message: 'Debe indicar el nuevo técnico de destino' });
@@ -672,7 +755,8 @@ export class TicketController {
         ticketId,
         parseInt(nuevoTecnicoId, 10),
         nuevaCategoriaId ? parseInt(nuevaCategoriaId, 10) : undefined,
-        nuevaComplejidad as TicketComplejidad
+        nuevaComplejidad as TicketComplejidad,
+        nuevosTecnicosAdicionalesIds
       );
 
       const nuevoTecUser = await UserModel.findById(parseInt(nuevoTecnicoId, 10));

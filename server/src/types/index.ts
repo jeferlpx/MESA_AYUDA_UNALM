@@ -143,6 +143,21 @@ export interface TicketDB {
   actualizado_en: string;
   encuesta_puntuacion?: number;
   encuesta_comentario?: string;
+  tecnicos_asignados?: AssignedTechnician[];
+  tecnicos_adicionales?: AssignedTechnician[];
+}
+
+export interface AssignedTechnician {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  nombre_completo?: string;
+  email?: string;
+  foto_perfil?: string;
+  cargo?: string;
+  especialidad?: string;
+  telefono?: string;
+  rol_asignacion: 'PRINCIPAL' | 'APOYO';
 }
 
 export interface TicketCommentDB {

@@ -40,6 +40,9 @@ import {
   Paperclip,
   MessageSquare,
   X,
+  Users,
+  Upload,
+  CheckCircle,
 } from 'lucide-react';
 
 interface SpecialistDashboardProps {
@@ -77,6 +80,8 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
   // Form states in Drawer
   const [targetTechId, setTargetTechId] = useState<number | ''>('');
   const [targetComplexity, setTargetComplexity] = useState<TicketComplejidad>('BAJA');
+  const [additionalTechIds, setAdditionalTechIds] = useState<number[]>([]);
+  const [resolucionArchivo, setResolucionArchivo] = useState<File | null>(null);
   const [targetStatus, setTargetStatus] = useState<TicketStatus>('ASIGNADO');
   const [solucionDetalle, setSolucionDetalle] = useState<string>('');
   const [materialesUsadosDrawer, setMaterialesUsadosDrawer] = useState<string>('');
@@ -255,6 +260,12 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
     setDrawerAction(defaultAction);
     setTargetTechId(ticket.tecnico_id || '');
     setTargetComplexity(ticket.complejidad || 'BAJA');
+    setAdditionalTechIds(
+      ticket.tecnicos_adicionales && ticket.tecnicos_adicionales.length > 0
+        ? ticket.tecnicos_adicionales.map((t) => t.id)
+        : []
+    );
+    setResolucionArchivo(null);
     if (defaultAction === 'status' && isTechnicianOnly) {
       setTargetStatus('RESUELTO');
     } else {
@@ -277,7 +288,16 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
     setSubmittingAction(true);
     setActionError(null);
     try {
-      const res = await api.assignTechnician(selectedTicket.id, Number(targetTechId), targetComplexity);
+      const additionalToAssign =
+        selectedTicket.modulo === 'OTIC' && targetComplexity === 'COMPLEJA'
+          ? additionalTechIds
+          : [];
+      const res = await api.assignTechnician(
+        selectedTicket.id,
+        Number(targetTechId),
+        targetComplexity,
+        additionalToAssign
+      );
       if (res.success) {
         setIsDrawerOpen(false);
         await loadData();
@@ -305,10 +325,12 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
         solucionDetalle,
         undefined,
         materialesUsadosDrawer,
-        materialesSobrantesDrawer
+        materialesSobrantesDrawer,
+        resolucionArchivo
       );
       if (res.success) {
         setIsDrawerOpen(false);
+        setResolucionArchivo(null);
         await loadData();
       }
     } catch (err: any) {
@@ -844,27 +866,37 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                     {!isTechnicianOnly && activeQueueTab !== 'REPORTADO' && (
                       <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
                         {t.tecnico_nombre ? (
-                          <div
-                            className="flex items-center space-x-2 cursor-pointer group/tech"
-                            onClick={() => {
-                              if (t.tecnico_id) setSelectedTechProfileId(t.tecnico_id);
-                            }}
-                            title="Clic para ver récord de atenciones y reseñas"
-                          >
-                            {t.tecnico_foto ? (
-                              <img
-                                src={getAssetUrl(t.tecnico_foto)}
-                                alt={t.tecnico_nombre}
-                                className="w-6 h-6 rounded-full object-cover border border-amber-300 shadow-2xs group-hover/tech:ring-2 group-hover/tech:ring-amber-300 transition-all"
-                              />
-                            ) : (
-                              <span className="w-6 h-6 rounded-full bg-unalm-100 text-unalm-700 font-extrabold flex items-center justify-center text-[9px] group-hover/tech:bg-amber-100">
-                                {t.tecnico_nombre.slice(0, 2).toUpperCase()}
+                          <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                            <div
+                              className="flex items-center space-x-2 cursor-pointer group/tech"
+                              onClick={() => {
+                                if (t.tecnico_id) setSelectedTechProfileId(t.tecnico_id);
+                              }}
+                              title="Clic para ver récord de atenciones y reseñas del especialista principal"
+                            >
+                              {t.tecnico_foto ? (
+                                <img
+                                  src={getAssetUrl(t.tecnico_foto)}
+                                  alt={t.tecnico_nombre}
+                                  className="w-6 h-6 rounded-full object-cover border border-amber-300 shadow-2xs group-hover/tech:ring-2 group-hover/tech:ring-amber-300 transition-all"
+                                />
+                              ) : (
+                                <span className="w-6 h-6 rounded-full bg-unalm-100 text-unalm-700 font-extrabold flex items-center justify-center text-[9px] group-hover/tech:bg-amber-100">
+                                  {t.tecnico_nombre.slice(0, 2).toUpperCase()}
+                                </span>
+                              )}
+                              <span className="font-semibold text-slate-800 group-hover/tech:text-unalm-700 transition-colors">
+                                {t.tecnico_nombre}
+                              </span>
+                            </div>
+                            {t.tecnicos_adicionales && t.tecnicos_adicionales.length > 0 && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs cursor-help"
+                                title={`Equipo de apoyo técnico: ${t.tecnicos_adicionales.map((a) => a.nombre_completo || `${a.nombres} ${a.apellidos}`).join(', ')}`}
+                              >
+                                +{t.tecnicos_adicionales.length} apoyo{t.tecnicos_adicionales.length > 1 ? 's' : ''}
                               </span>
                             )}
-                            <span className="font-semibold text-slate-800 group-hover/tech:text-unalm-700 transition-colors">
-                              {t.tecnico_nombre}
-                            </span>
                           </div>
                         ) : (
                           <span className="text-amber-700 font-extrabold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-300 inline-block animate-pulse">
@@ -930,8 +962,8 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                         </>
                       )}
 
-                      {/* Solo el técnico asignado puede resolver su propio ticket */}
-                      {isTechnicianOnly && t.estado !== 'RESUELTO' && t.tecnico_id === user?.id && (
+                      {/* Solo el técnico asignado (principal o apoyo) puede resolver su propio ticket */}
+                      {isTechnicianOnly && t.estado !== 'RESUELTO' && (t.tecnico_id === user?.id || (t.tecnicos_adicionales && t.tecnicos_adicionales.some((a) => a.id === user?.id))) && (
                         <button
                           onClick={() => {
                             setTargetStatus('RESUELTO');
@@ -1088,12 +1120,19 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Seleccionar Técnico Especialista (*)
+                    {selectedTicket?.modulo === 'OTIC' && targetComplexity === 'COMPLEJA'
+                      ? 'Técnico Especialista Principal / Responsable (*)'
+                      : 'Seleccionar Técnico Especialista (*)'}
                   </label>
                   <SearchableTechnicianSelect
                     technicians={availableTechs as any}
                     selectedTechId={targetTechId}
-                    onSelect={(id) => setTargetTechId(id)}
+                    onSelect={(id) => {
+                      setTargetTechId(id);
+                      if (id) {
+                        setAdditionalTechIds((prev) => prev.filter((aid) => aid !== id));
+                      }
+                    }}
                     placeholder="Buscar especialista por nombre, taller, cargo o DNI..."
                   />
                 </div>
@@ -1104,7 +1143,13 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                   </label>
                   <select
                     value={targetComplexity}
-                    onChange={(e) => setTargetComplexity(e.target.value as TicketComplejidad)}
+                    onChange={(e) => {
+                      const newComp = e.target.value as TicketComplejidad;
+                      setTargetComplexity(newComp);
+                      if (newComp !== 'COMPLEJA') {
+                        setAdditionalTechIds([]);
+                      }
+                    }}
                     className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white font-bold text-slate-800"
                   >
                     <option value="BAJA">Baja — Estándar</option>
@@ -1113,6 +1158,75 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                     <option value="COMPLEJA">Crítica / Muy Compleja — Especializada</option>
                   </select>
                 </div>
+
+                {/* ASIGNACIÓN MÚLTIPLE DE TÉCNICOS: SOLO MESA DE AYUDA OTIC (NO SERVICIOS GENERALES) Y COMPLEJIDAD CRÍTICA */}
+                {selectedTicket?.modulo === 'OTIC' && targetComplexity === 'COMPLEJA' && (
+                  <div className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-2xl space-y-2.5 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-amber-950 flex items-center space-x-1.5">
+                        <Users className="w-4 h-4 text-amber-700" />
+                        <span>Designar Técnicos de Apoyo / Colaboradores</span>
+                      </label>
+                      <span className="text-[10px] uppercase font-extrabold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
+                        Equipo Multidisciplinario
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-tight">
+                      Por ser un caso de complejidad <strong>Crítica / Muy Compleja</strong> en OTIC, puede designar más técnicos para la atención técnica conjunta.
+                    </p>
+
+                    {/* Chips de técnicos de apoyo seleccionados */}
+                    {additionalTechIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {additionalTechIds.map((techId) => {
+                          const tec = technicians.find((t) => t.id === techId);
+                          if (!tec) return null;
+                          return (
+                            <span
+                              key={techId}
+                              className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-white border border-amber-300 text-slate-800 rounded-xl text-xs font-semibold shadow-2xs"
+                            >
+                              <span>{tec.nombres} {tec.apellidos}</span>
+                              <button
+                                type="button"
+                                onClick={() => setAdditionalTechIds((prev) => prev.filter((id) => id !== techId))}
+                                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                                title="Quitar técnico colaborador"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Selector para añadir un nuevo técnico de apoyo */}
+                    {availableTechs.filter((t) => t.id !== targetTechId && !additionalTechIds.includes(t.id)).length > 0 && (
+                      <div>
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (val && !additionalTechIds.includes(val)) {
+                              setAdditionalTechIds((prev) => [...prev, val]);
+                            }
+                          }}
+                          className="w-full p-2 border border-amber-300 rounded-xl text-xs bg-white text-slate-700 font-medium cursor-pointer"
+                        >
+                          <option value="">+ Agregar especialista técnico al equipo...</option>
+                          {availableTechs
+                            .filter((t) => t.id !== targetTechId && !additionalTechIds.includes(t.id))
+                            .map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.nombres} {t.apellidos} {t.especialidad ? `— ${t.especialidad}` : ''}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="pt-2">
                   <button
@@ -1302,26 +1416,79 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
                 {/* Cuadro de texto para informe técnico / solución del trabajo finalizado */}
                 {(targetStatus === 'RESUELTO' || isTechnicianOnly) && (
-                  <div className="space-y-1.5 p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200">
-                    <label className="block text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>
-                        {selectedTicket.modulo === 'SERVICIOS_GENERALES'
-                          ? 'Informe Técnico sobre la Ejecución de la Orden (*)'
-                          : 'Informe Técnico / Trabajo Finalizado (*)'}
-                      </span>
-                    </label>
-                    <p className="text-[11px] text-emerald-800 leading-relaxed">
-                      Registre con claridad las acciones técnicas aplicadas, pruebas realizadas o trabajo finalizado para dar por resuelto este ticket.
-                    </p>
-                    <textarea
-                      rows={4}
-                      required
-                      value={solucionDetalle}
-                      onChange={(e) => setSolucionDetalle(e.target.value)}
-                      placeholder="Ej: Se procedió a reemplazar el conector dañado, verificación de conectividad Gigabit 1000 Mbps y pruebas con el usuario conformes..."
-                      className="w-full p-3 border border-emerald-300 rounded-xl text-xs bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium uppercase shadow-2xs"
-                    />
+                  <div className="space-y-3 p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                    <div>
+                      <label className="block text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center space-x-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>
+                          {selectedTicket.modulo === 'SERVICIOS_GENERALES'
+                            ? 'Informe Técnico sobre la Ejecución de la Orden (*)'
+                            : 'Informe Técnico / Trabajo Finalizado (*)'}
+                        </span>
+                      </label>
+                      <p className="text-[11px] text-emerald-800 leading-relaxed mb-1.5">
+                        Registre con claridad las acciones técnicas aplicadas, pruebas realizadas o trabajo finalizado para dar por resuelto este ticket.
+                      </p>
+                      <textarea
+                        rows={4}
+                        required
+                        value={solucionDetalle}
+                        onChange={(e) => setSolucionDetalle(e.target.value)}
+                        placeholder="Ej: Se procedió a reemplazar el conector dañado, verificación de conectividad Gigabit 1000 Mbps y pruebas con el usuario conformes..."
+                        className="w-full p-3 border border-emerald-300 rounded-xl text-xs bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium uppercase shadow-2xs"
+                      />
+                    </div>
+
+                    {/* ADJUNTAR INFORME TÉCNICO O DOCUMENTO OPCIONAL (NUEVO REQUERIMIENTO) */}
+                    <div className="pt-2 border-t border-emerald-200/80 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-emerald-950 flex items-center space-x-1.5">
+                          <Paperclip className="w-4 h-4 text-emerald-700" />
+                          <span>Añadir Informe Técnico o Documento</span>
+                        </label>
+                        <span className="text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300">
+                          Opcional
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 leading-tight">
+                        Adjunte un reporte técnico firmado, acta de conformidad, documento de diagnóstico o evidencia (PDF, Word, Excel o imágenes).
+                      </p>
+
+                      {resolucionArchivo ? (
+                        <div className="flex items-center justify-between p-2.5 bg-white border border-emerald-300 rounded-xl text-xs shadow-2xs">
+                          <div className="flex items-center space-x-2 truncate">
+                            <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <div className="truncate">
+                              <span className="font-bold text-slate-800 truncate block">{resolucionArchivo.name}</span>
+                              <span className="text-[10px] text-slate-500">{(resolucionArchivo.size / 1024).toFixed(1)} KB</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setResolucionArchivo(null)}
+                            className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                            title="Quitar archivo"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center justify-center space-x-2 p-2.5 bg-white hover:bg-emerald-100/50 border border-dashed border-emerald-400 rounded-xl text-xs text-emerald-800 font-semibold cursor-pointer transition-colors shadow-2xs">
+                          <Upload className="w-4 h-4 text-emerald-600" />
+                          <span>Seleccionar informe o documento técnico...</span>
+                          <input
+                            type="file"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                setResolucionArchivo(e.target.files[0]);
+                              }
+                            }}
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip,.rar"
+                          />
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
 

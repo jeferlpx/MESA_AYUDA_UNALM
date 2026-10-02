@@ -10,6 +10,7 @@ import {
   AuditLogDB,
   TicketComplejidad,
   DashboardMetrics,
+  AssignedTechnician,
 } from '../types';
 import { calculateSLADeadlines } from '../utils/sla';
 
@@ -48,7 +49,37 @@ export class TicketModel {
     );
 
     if (rows.length === 0) return null;
-    return rows[0] as TicketDB;
+    const ticket = rows[0] as TicketDB;
+
+    // Obtener equipo de técnicos asignados
+    const [tecRows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT tt.id as asignacion_id, tt.rol_asignacion, u.id, u.nombres, u.apellidos,
+              CONCAT(u.nombres, ' ', u.apellidos) as nombre_completo,
+              u.email, u.foto_perfil, u.cargo, u.especialidad, u.telefono
+       FROM ticket_tecnicos tt
+       JOIN usuarios u ON tt.tecnico_id = u.id
+       WHERE tt.ticket_id = ?
+       ORDER BY FIELD(tt.rol_asignacion, 'PRINCIPAL', 'APOYO'), tt.id ASC`,
+      [ticket.id]
+    );
+
+    const allTecs: AssignedTechnician[] = (tecRows as any[]).map((r) => ({
+      id: r.id,
+      nombres: r.nombres,
+      apellidos: r.apellidos,
+      nombre_completo: r.nombre_completo,
+      email: r.email,
+      foto_perfil: r.foto_perfil,
+      cargo: r.cargo,
+      especialidad: r.especialidad,
+      telefono: r.telefono,
+      rol_asignacion: r.rol_asignacion,
+    }));
+
+    ticket.tecnicos_asignados = allTecs;
+    ticket.tecnicos_adicionales = allTecs.filter((t) => t.rol_asignacion === 'APOYO');
+
+    return ticket;
   }
 
   static async findByCode(code: string): Promise<TicketDB | null> {
@@ -83,7 +114,37 @@ export class TicketModel {
     );
 
     if (rows.length === 0) return null;
-    return rows[0] as TicketDB;
+    const ticket = rows[0] as TicketDB;
+
+    // Obtener equipo de técnicos asignados
+    const [tecRows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT tt.id as asignacion_id, tt.rol_asignacion, u.id, u.nombres, u.apellidos,
+              CONCAT(u.nombres, ' ', u.apellidos) as nombre_completo,
+              u.email, u.foto_perfil, u.cargo, u.especialidad, u.telefono
+       FROM ticket_tecnicos tt
+       JOIN usuarios u ON tt.tecnico_id = u.id
+       WHERE tt.ticket_id = ?
+       ORDER BY FIELD(tt.rol_asignacion, 'PRINCIPAL', 'APOYO'), tt.id ASC`,
+      [ticket.id]
+    );
+
+    const allTecs: AssignedTechnician[] = (tecRows as any[]).map((r) => ({
+      id: r.id,
+      nombres: r.nombres,
+      apellidos: r.apellidos,
+      nombre_completo: r.nombre_completo,
+      email: r.email,
+      foto_perfil: r.foto_perfil,
+      cargo: r.cargo,
+      especialidad: r.especialidad,
+      telefono: r.telefono,
+      rol_asignacion: r.rol_asignacion,
+    }));
+
+    ticket.tecnicos_asignados = allTecs;
+    ticket.tecnicos_adicionales = allTecs.filter((t) => t.rol_asignacion === 'APOYO');
+
+    return ticket;
   }
 
   static async searchTickets(filters: {
@@ -131,8 +192,8 @@ export class TicketModel {
 
     // REGLA CLAVE DE AISLAMIENTO POR ROL Y MÓDULO (OTIC vs SERVICIOS GENERALES)
     if (filters.userRole === 'TECNICO') {
-      sql += ` AND t.tecnico_id = ? AND t.modulo = 'OTIC'`;
-      params.push(filters.userId);
+      sql += ` AND (t.tecnico_id = ? OR EXISTS (SELECT 1 FROM ticket_tecnicos tt WHERE tt.ticket_id = t.id AND tt.tecnico_id = ?)) AND t.modulo = 'OTIC'`;
+      params.push(filters.userId, filters.userId);
     } else if (filters.userRole === 'TECNICO_SG') {
       sql += ` AND t.tecnico_id = ? AND t.modulo = 'SERVICIOS_GENERALES'`;
       params.push(filters.userId);
@@ -175,8 +236,8 @@ export class TicketModel {
     }
 
     if (filters.tecnicoId && !['TECNICO', 'TECNICO_SG'].includes(filters.userRole)) {
-      sql += ` AND t.tecnico_id = ?`;
-      params.push(filters.tecnicoId);
+      sql += ` AND (t.tecnico_id = ? OR EXISTS (SELECT 1 FROM ticket_tecnicos tt WHERE tt.ticket_id = t.id AND tt.tecnico_id = ?))`;
+      params.push(filters.tecnicoId, filters.tecnicoId);
     }
 
     if (filters.prioridad) {
@@ -193,7 +254,46 @@ export class TicketModel {
     sql += ` ORDER BY t.id DESC LIMIT 300`;
 
     const [rows] = await dbPool.query<RowDataPacket[]>(sql, params);
-    return rows as TicketDB[];
+    const tickets = rows as TicketDB[];
+
+    if (tickets.length > 0) {
+      const ticketIds = tickets.map((t) => t.id);
+      const [tecRows] = await dbPool.query<RowDataPacket[]>(
+        `SELECT tt.ticket_id, tt.rol_asignacion, u.id, u.nombres, u.apellidos,
+                CONCAT(u.nombres, ' ', u.apellidos) as nombre_completo,
+                u.email, u.foto_perfil, u.cargo, u.especialidad, u.telefono
+         FROM ticket_tecnicos tt
+         JOIN usuarios u ON tt.tecnico_id = u.id
+         WHERE tt.ticket_id IN (?)
+         ORDER BY FIELD(tt.rol_asignacion, 'PRINCIPAL', 'APOYO'), tt.id ASC`,
+        [ticketIds]
+      );
+
+      const map = new Map<number, AssignedTechnician[]>();
+      for (const r of tecRows as any[]) {
+        if (!map.has(r.ticket_id)) map.set(r.ticket_id, []);
+        map.get(r.ticket_id)!.push({
+          id: r.id,
+          nombres: r.nombres,
+          apellidos: r.apellidos,
+          nombre_completo: r.nombre_completo,
+          email: r.email,
+          foto_perfil: r.foto_perfil,
+          cargo: r.cargo,
+          especialidad: r.especialidad,
+          telefono: r.telefono,
+          rol_asignacion: r.rol_asignacion,
+        });
+      }
+
+      for (const t of tickets) {
+        const all = map.get(t.id) || [];
+        t.tecnicos_asignados = all;
+        t.tecnicos_adicionales = all.filter((a) => a.rol_asignacion === 'APOYO');
+      }
+    }
+
+    return tickets;
   }
 
   static async createTicket(data: {
@@ -309,7 +409,8 @@ export class TicketModel {
   static async assignTechnicianWithComplexity(
     ticketId: number,
     tecnicoId: number,
-    complejidad: TicketComplejidad = 'BAJA'
+    complejidad: TicketComplejidad = 'BAJA',
+    tecnicosAdicionalesIds: number[] = []
   ): Promise<void> {
     // Obtener datos del ticket y categoría para recalcular SLA
     const [tRows] = await dbPool.query<RowDataPacket[]>(
@@ -340,13 +441,33 @@ export class TicketModel {
        WHERE id = ?`,
       [tecnicoId, complejidad, fechaLimiteResolucion, ticketId]
     );
+
+    // Actualizar equipo de técnicos en tabla ticket_tecnicos
+    await dbPool.query(`DELETE FROM ticket_tecnicos WHERE ticket_id = ?`, [ticketId]);
+    await dbPool.query(
+      `INSERT INTO ticket_tecnicos (ticket_id, tecnico_id, rol_asignacion) VALUES (?, ?, 'PRINCIPAL')`,
+      [ticketId, tecnicoId]
+    );
+
+    // Si es OTIC y la complejidad es COMPLEJA (Crítica / Muy Compleja), guardar técnicos de apoyo
+    if (ticket.modulo === 'OTIC' && complejidad === 'COMPLEJA' && Array.isArray(tecnicosAdicionalesIds) && tecnicosAdicionalesIds.length > 0) {
+      for (const addId of tecnicosAdicionalesIds) {
+        if (addId && addId !== tecnicoId) {
+          await dbPool.query(
+            `INSERT IGNORE INTO ticket_tecnicos (ticket_id, tecnico_id, rol_asignacion) VALUES (?, ?, 'APOYO')`,
+            [ticketId, addId]
+          );
+        }
+      }
+    }
   }
 
   static async deriveTicket(
     ticketId: number,
     nuevoTecnicoId: number,
     nuevaCategoriaId?: number,
-    nuevaComplejidad?: TicketComplejidad
+    nuevaComplejidad?: TicketComplejidad,
+    nuevosTecnicosAdicionalesIds?: number[]
   ): Promise<void> {
     const updates: string[] = ['tecnico_id = ?', `estado = 'ASIGNADO'`];
     const params: any[] = [nuevoTecnicoId];
@@ -363,6 +484,24 @@ export class TicketModel {
 
     params.push(ticketId);
     await dbPool.query(`UPDATE tickets SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    // Actualizar asignación en ticket_tecnicos
+    await dbPool.query(`DELETE FROM ticket_tecnicos WHERE ticket_id = ?`, [ticketId]);
+    await dbPool.query(
+      `INSERT INTO ticket_tecnicos (ticket_id, tecnico_id, rol_asignacion) VALUES (?, ?, 'PRINCIPAL')`,
+      [ticketId, nuevoTecnicoId]
+    );
+
+    if (nuevaComplejidad === 'COMPLEJA' && Array.isArray(nuevosTecnicosAdicionalesIds) && nuevosTecnicosAdicionalesIds.length > 0) {
+      for (const addId of nuevosTecnicosAdicionalesIds) {
+        if (addId && addId !== nuevoTecnicoId) {
+          await dbPool.query(
+            `INSERT IGNORE INTO ticket_tecnicos (ticket_id, tecnico_id, rol_asignacion) VALUES (?, ?, 'APOYO')`,
+            [ticketId, addId]
+          );
+        }
+      }
+    }
   }
 
   static async reopenTicket(ticketId: number, motivo?: string, usuarioId?: number): Promise<void> {

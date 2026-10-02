@@ -197,6 +197,22 @@ CREATE TABLE `tickets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================
+-- 7.1 TABLA ASIGNACIONES MÚLTIPLES DE TÉCNICOS (CASOS DE ALTA COMPLEJIDAD OTIC)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `ticket_tecnicos` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `ticket_id` INT NOT NULL,
+  `tecnico_id` INT NOT NULL,
+  `rol_asignacion` ENUM('PRINCIPAL', 'APOYO') NOT NULL DEFAULT 'APOYO',
+  `creado_en` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_ticket_tecnico` (`ticket_id`, `tecnico_id`),
+  CONSTRAINT `fk_ticket_tecnicos_ticket` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ticket_tecnicos_tecnico` FOREIGN KEY (`tecnico_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  INDEX `idx_tt_ticket` (`ticket_id`),
+  INDEX `idx_tt_tecnico` (`tecnico_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================================
 -- 8. TABLA COMENTARIOS Y CHAT DE TICKET (NOTAS INTERNAS vs CHAT PÚBLICO)
 -- =============================================================================
 CREATE TABLE `comentarios_ticket` (

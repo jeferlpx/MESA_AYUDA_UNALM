@@ -534,6 +534,30 @@ export async function runDatabaseMigrations(): Promise<void> {
       }
     }
 
+    // Asegurar tabla ticket_tecnicos para asignación múltiple en tickets complejos de OTIC
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS ticket_tecnicos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ticket_id INT NOT NULL,
+        tecnico_id INT NOT NULL,
+        rol_asignacion ENUM('PRINCIPAL', 'APOYO') NOT NULL DEFAULT 'APOYO',
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_ticket_tecnico (ticket_id, tecnico_id),
+        CONSTRAINT fk_ticket_tecnicos_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE,
+        CONSTRAINT fk_ticket_tecnicos_tecnico FOREIGN KEY (tecnico_id) REFERENCES usuarios (id) ON DELETE CASCADE,
+        INDEX idx_tt_ticket (ticket_id),
+        INDEX idx_tt_tecnico (tecnico_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Sincronizar asignaciones existentes hacia ticket_tecnicos si existen tickets con tecnico_id
+    await connection.query(`
+      INSERT IGNORE INTO ticket_tecnicos (ticket_id, tecnico_id, rol_asignacion)
+      SELECT id, tecnico_id, 'PRINCIPAL' 
+      FROM tickets 
+      WHERE tecnico_id IS NOT NULL;
+    `);
+
     console.log('[Database Migrations OK] Esquema sincronizado con Módulos OTIC, Servicios Generales e Inspecciones Preventivas SIGI (ROF UNALM 2023).');
 
   } catch (error) {

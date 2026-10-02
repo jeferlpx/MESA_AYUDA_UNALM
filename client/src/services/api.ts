@@ -180,9 +180,23 @@ export const api = {
     solucionDetalle?: string,
     comentario?: string,
     materialesUsados?: string,
-    materialesSobrantes?: string
-  ) =>
-    apiFetch(`/tickets/${id}/status`, {
+    materialesSobrantes?: string,
+    archivo?: File | null
+  ) => {
+    if (archivo) {
+      const formData = new FormData();
+      formData.append('estado', status);
+      if (solucionDetalle) formData.append('solucionDetalle', solucionDetalle);
+      if (comentario) formData.append('comentario', comentario);
+      if (materialesUsados) formData.append('materialesUsados', materialesUsados);
+      if (materialesSobrantes) formData.append('materialesSobrantes', materialesSobrantes);
+      formData.append('file', archivo);
+      return apiFetch(`/tickets/${id}/status`, {
+        method: 'PUT',
+        body: formData,
+      });
+    }
+    return apiFetch(`/tickets/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({
         estado: status,
@@ -191,7 +205,8 @@ export const api = {
         materialesUsados,
         materialesSobrantes,
       }),
-    }),
+    });
+  },
   updateTicketStatus: (
     id: number,
     data: {
@@ -200,16 +215,31 @@ export const api = {
       comentario?: string;
       materialesUsados?: string;
       materialesSobrantes?: string;
+      archivo?: File | null;
     }
-  ) =>
-    apiFetch(`/tickets/${id}/status`, {
+  ) => {
+    if (data.archivo) {
+      const formData = new FormData();
+      formData.append('estado', data.estado);
+      if (data.solucionDetalle) formData.append('solucionDetalle', data.solucionDetalle);
+      if (data.comentario) formData.append('comentario', data.comentario);
+      if (data.materialesUsados) formData.append('materialesUsados', data.materialesUsados);
+      if (data.materialesSobrantes) formData.append('materialesSobrantes', data.materialesSobrantes);
+      formData.append('file', data.archivo);
+      return apiFetch(`/tickets/${id}/status`, {
+        method: 'PUT',
+        body: formData,
+      });
+    }
+    return apiFetch(`/tickets/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify(data),
-    }),
-  assignTechnician: (id: number, tecnicoId: number, complejidad?: string) => 
-    apiFetch(`/tickets/${id}/assign`, { method: 'PUT', body: JSON.stringify({ tecnicoId, complejidad }) }),
-  deriveTicket: (id: number, nuevoTecnicoId: number, nuevaCategoriaId?: number, nuevaComplejidad?: string, motivo?: string) =>
-    apiFetch(`/tickets/${id}/derive`, { method: 'PUT', body: JSON.stringify({ nuevoTecnicoId, nuevaCategoriaId, nuevaComplejidad, motivo }) }),
+    });
+  },
+  assignTechnician: (id: number, tecnicoId: number, complejidad?: string, tecnicosAdicionalesIds?: number[]) => 
+    apiFetch(`/tickets/${id}/assign`, { method: 'PUT', body: JSON.stringify({ tecnicoId, complejidad, tecnicosAdicionalesIds }) }),
+  deriveTicket: (id: number, nuevoTecnicoId: number, nuevaCategoriaId?: number, nuevaComplejidad?: string, motivo?: string, nuevosTecnicosAdicionalesIds?: number[]) =>
+    apiFetch(`/tickets/${id}/derive`, { method: 'PUT', body: JSON.stringify({ nuevoTecnicoId, nuevaCategoriaId, nuevaComplejidad, motivo, nuevosTecnicosAdicionalesIds }) }),
   observeTicket: (id: number, formData: FormData) =>
     apiFetch(`/tickets/${id}/observe`, { method: 'PUT', body: formData }),
   reopenTicket: (id: number, motivo?: string) =>

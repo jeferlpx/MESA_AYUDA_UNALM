@@ -948,8 +948,12 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                         )}
 
                         {ticket.tecnico_nombre && (
-                          <div className="flex items-center space-x-1 text-unalm-700 font-bold">
-                            <span>Especialista: {ticket.tecnico_nombre}</span>
+                          <div className="flex items-center space-x-1 text-unalm-700 font-bold flex-wrap">
+                            <span>
+                              {ticket.tecnicos_adicionales && ticket.tecnicos_adicionales.length > 0
+                                ? `Especialistas: ${ticket.tecnico_nombre} (+ ${ticket.tecnicos_adicionales.map((a) => a.nombre_completo || a.nombres).join(', ')})`
+                                : `Especialista: ${ticket.tecnico_nombre}`}
+                            </span>
                           </div>
                         )}
                       </div>
