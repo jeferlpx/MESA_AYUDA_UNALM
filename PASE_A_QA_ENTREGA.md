@@ -17,6 +17,8 @@ Se completó y estabilizó la versión para pruebas funcionales e integrales del
 3. **Manejo de Evidencias:** Carga y previsualización segura de archivos adjuntos (imágenes y PDFs) a través de proxy inverso Nginx (`/uploads/`).
 4. **Seguridad y Control de Acceso (RBAC):** Token JWT con expiración de 24 horas, protección contra vistas administrativas para Solicitantes (`safeActiveTab`) y validación de correo corporativo `@lamolina.edu.pe`.
 5. **Carga Oficial del Padrón Institucional:** 1,354 cuentas de personal docente y administrativo precargadas con clave temporal institucional `123456` y flujo de primer inicio de sesión obligatorio.
+6. **Asignación Colaborativa Multitécnico (Exclusivo OTIC):** Facilidad en Mesa de Ayuda OTIC para conformar un equipo de múltiples especialistas (1 Técnico Principal + N Técnicos de Apoyo) cuando la complejidad técnica es crítica (`COMPLEJA`), manteniendo asignación simple e inviolable para Servicios Generales.
+7. **Adjunto de Informe Técnico Digital en Resolución (Opcional):** Los especialistas técnicos pueden adjuntar documentación formal (.pdf, .docx, imágenes) al momento de registrar el diagnóstico y solución del ticket.
 
 ---
 
@@ -83,16 +85,22 @@ QA debe validar el siguiente flujo integral de ciclo de vida del ticket:
 1. Cerrar sesión e ingresar con el operador: `soporte@lamolina.edu.pe` / `Unalm2026$`.
 2. Dirigirse a **"Mesa de Ayuda OTIC (Triage)"**.
 3. Localizar el ticket generado en el Paso 1 (en estado `REPORTADO`).
-4. Abrir el ticket, pulsar **"Asignar Especialista"**, seleccionar a `David Mendoza (Técnico Redes)` y confirmar.
-5. **Verificación:** El ticket pasa a estado `ASIGNADO` y la línea de vida registra el evento con fecha y hora.
+4. Abrir el ticket y pulsar **"Asignar Especialista"**.
+5. Seleccionar la Complejidad Técnica:
+   - Si se selecciona **"Crítica / Muy Compleja — Especializada" (`COMPLEJA`)**, el sistema despliega el selector **"Equipo de Apoyo Técnico (Multitécnico)"**, permitiendo seleccionar al Técnico Principal (ej: `David Mendoza`) y sumar técnicos de apoyo (ej: `Ana Torres`).
+   - Si se selecciona *Baja* o *Media*, la asignación permanece unívoca.
+6. Confirmar la asignación.
+7. **Verificación:** El ticket pasa a estado `ASIGNADO`, la línea de vida registra el evento y todos los técnicos asignados visualizan el requerimiento en su cola de trabajo.
 
 ### Paso 3: Intervención y Resolución (Técnico)
-1. Cerrar sesión e ingresar con el técnico: `tecnico.redes@lamolina.edu.pe` / `Unalm2026$`.
+1. Cerrar sesión e ingresar con el técnico asignado (principal o de apoyo): `tecnico.redes@lamolina.edu.pe` / `Unalm2026$`.
 2. En la pestaña **"Cola de Tickets OTIC"**, abrir el ticket asignado.
 3. Pulsar en **"Iniciar Atención"** (el ticket pasa a `EN_EJECUCION`).
 4. (Opcional) Enviar una **Nota Interna** marcando el checkbox de privacidad.
-5. Hacer clic en **"Resolver Ticket"**, ingresar el informe técnico de solución (ej: *"Se reconfiguró el acceso del usuario en el servidor SIRA satisfactoriamente"*) y confirmar.
-6. **Verificación:** El estado cambia a `RESUELTO`. El sistema registra si se cumplió el SLA de resolución.
+5. Hacer clic en **"Resolver Ticket"**, ingresar el informe técnico de solución (ej: *"Se reconfiguró el acceso del usuario en el servidor SIRA satisfactoriamente"*).
+6. En el campo **"Añadir Informe Técnico o Documento (Opcional)"**, cargar un archivo digital de soporte (.pdf, .docx o captura).
+7. Confirmar la resolución.
+8. **Verificación:** El estado cambia a `RESUELTO`. El archivo se almacena en el servidor y se registra en la auditoría y adjuntos del ticket. El sistema calcula el cumplimiento de SLA.
 
 ### Paso 4 y 5: Verificación de Solución (Solicitante)
 1. Cerrar sesión e ingresar nuevamente como solicitante: `jbenavides@lamolina.edu.pe` / `Unalm2026$`.

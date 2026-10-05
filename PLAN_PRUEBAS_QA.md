@@ -163,6 +163,48 @@ Para realizar las pruebas de extremo a extremo, se dispone de las siguientes cue
 
 ---
 
+### MÓDULO 7: ASIGNACIÓN COLABORATIVA MULTITÉCNICO E INFORMES TÉCNICOS
+---
+
+#### 📌 CP-11: Asignación Multitécnico en Mesa de Ayuda OTIC con Complejidad Crítica (`COMPLEJA`)
+- **Precondición:** Sesión iniciada como Mesa de Ayuda OTIC (`soporte@lamolina.edu.pe`). Ticket perteneciente al módulo `OTIC` en estado `REPORTADO` o `ASIGNADO`.
+- **Pasos:**
+  1. Abrir el modal o drawer de asignación del ticket.
+  2. En el campo **"Nivel de Complejidad Técnica (*)"**, seleccionar **"Crítica / Muy Compleja — Especializada" (`COMPLEJA`)**.
+  3. Verificar que aparece la sección **"Equipo de Apoyo Técnico (Multitécnico)"**.
+  4. Seleccionar un Técnico Principal (ej: `David Mendoza`) y añadir uno o dos Técnicos de Apoyo desde el selector adicional (ej: `Ana Torres`).
+  5. Confirmar la asignación.
+- **Resultado Esperado:**
+  - El ticket se actualiza registrando al técnico principal y a los técnicos de apoyo en la tabla `ticket_tecnicos`.
+  - La tabla de tickets muestra el badge distintivo del técnico principal junto al indicador `+{n} apoyos`.
+  - Al iniciar sesión con el técnico de apoyo (`tecnico.sistemas@lamolina.edu.pe`), el ticket aparece en su bandeja de trabajo y tiene permisos para consultar el detalle, intervenir y resolverlo.
+
+#### 📌 CP-12: Restricción y Aislamiento de Multitécnicos en Servicios Generales y Complejidades Estándar
+- **Precondición:** Sesión iniciada como Mesa de Ayuda Servicios Generales (`mesa.sg@lamolina.edu.pe`) o Mesa de Ayuda OTIC con ticket estándar.
+- **Pasos:**
+  1. Abrir la asignación de un ticket de Servicios Generales (`modulo === 'SERVICIOS_GENERALES'`).
+  2. Verificar que aun seleccionando complejidad crítica, **NO** se despliega el selector multitécnico, manteniendo asignación simple única.
+  3. Abrir un ticket de OTIC y seleccionar complejidad **"Baja"** o **"Media"**.
+  4. Verificar que el panel de técnicos de apoyo se oculta automáticamente.
+- **Resultado Esperado:**
+  - Solo el módulo OTIC bajo complejidad `COMPLEJA` permite multitécnicos. Todas las demás combinaciones preservan la asignación unívoca estándar.
+
+#### 📌 CP-13: Resolución Técnica de Ticket con Adjunto de Informe Técnico Digital (Opcional)
+- **Precondición:** Sesión iniciada con el técnico asignado (principal o de apoyo). Ticket en estado `EN_EJECUCION` o `ASIGNADO`.
+- **Pasos:**
+  1. Abrir el ticket y pulsar **"Resolver Ticket"** (o cambiar estado a `RESUELTO`).
+  2. Ingresar el comentario descriptivo de la solución técnica.
+  3. En la sección **"Añadir Informe Técnico o Documento (Opcional)"**, hacer clic en el selector y cargar un archivo formal (`.pdf`, `.docx` o imagen).
+  4. Verificar que se muestre el nombre del archivo y tamaño en KB/MB con botón de remoción disponible.
+  5. Confirmar la resolución del ticket.
+- **Resultado Esperado:**
+  - El ticket cambia a estado `RESUELTO`.
+  - El archivo se guarda en `/app/uploads` y se inserta en la tabla `adjuntos` con su metadata.
+  - En la línea de vida y auditoría del ticket se registra el evento `ADJUNTAR_ARCHIVO`.
+  - El solicitante y supervisores pueden descargar/previsualizar el documento adjunto desde la ficha del ticket.
+
+---
+
 ## 3. PRUEBAS NO FUNCIONALES Y DE INTEGRACIÓN
 
 | ID | Tipo de Prueba | Descripción | Criterio de Éxito |

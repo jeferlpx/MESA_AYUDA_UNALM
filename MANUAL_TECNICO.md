@@ -42,7 +42,7 @@ El **Sistema de Mesa de Ayuda UNALM** es una solución enterprise desarrollada i
                                           ▼
                      ┌──────────────────────────────────────────────┐
                      │          SERVIDOR MYSQL 8.0 CENTRAL          │
-                     │  Base de Datos: `mesaayuda_db` (13 Tablas)   │
+                     │  Base de Datos: `mesaayuda_db` (14 Tablas)   │
                      │  Zona Horaria: America/Lima (-05:00)         │
                      └──────────────────────────────────────────────┘
 ```
@@ -76,7 +76,7 @@ El **Sistema de Mesa de Ayuda UNALM** es una solución enterprise desarrollada i
 
 ---
 
-## 3. MODELO DE DATOS Y DICCIONARIO DE BASE DE DATOS (13 TABLAS)
+## 3. MODELO DE DATOS Y DICCIONARIO DE BASE DE DATOS (14 TABLAS)
 
 El esquema de base de datos se encuentra completamente definido en `schema.sql`:
 
@@ -96,6 +96,7 @@ El esquema de base de datos se encuentra completamente definido en `schema.sql`:
 └───────────┬──────────┘ └────────┬───────────┘ └──────────────────────┘
             │ 1:N                 │
             └─────────────────────┤ 1:N
+                                  ├───────────> ticket_tecnicos (Multitécnico)
                                   ├───────────> comentarios_ticket
                                   ├───────────> adjuntos
                                   ├───────────> inspecciones_infraestructura
@@ -108,15 +109,16 @@ El esquema de base de datos se encuentra completamente definido en `schema.sql`:
 2. **`usuarios`:** Almacena los datos personales, correo institucional `@lamolina.edu.pe`, hash BCrypt, cargo, dependencia, teléfono, flag `debe_cambiar_password` y `correo_pendiente`.
 3. **`categorias_servicio`:** Servicios estructurados con módulo (`OTIC` o `SERVICIOS_GENERALES`), SLAs pactados (`sla_horas_respuesta`, `sla_horas_resolucion`) y técnico por defecto.
 4. **`tickets`:** Entidad central con código correlativo (`OTIC-YYYY-XXXXX` o `SG-YYYY-XXXXX`), estado ITIL, urgencia, impacto, fechas de apertura, respuesta, resolución y verificación de SLA.
-5. **`comentarios_ticket`:** Mensajería bidireccional entre solicitante y técnico, con soporte de notas internas confidenciales (`es_nota_interna = true`).
-6. **`adjuntos`:** Registro de evidencias subidas con nombre original, nombre criptográfico en disco, tamaño y tipo MIME.
-7. **`encuestas_satisfaccion`:** Evaluación de calidad post-atención (1 a 5 estrellas, comentario, vinculación a `solicitante_id` y `tecnico_id`).
-8. **`logs_auditoria`:** Trazabilidad forense inmutable (registra IP, usuario, acción, campos y valores anteriores/nuevos).
-9. **`materiales_inventario_sg`:** Catálogo de 31 repuestos e insumos de talleres para Servicios Generales.
-10. **`materiales_movimientos_sg`:** Kardex de despacho de materiales asociados a órdenes de trabajo.
-11. **`inspecciones_infraestructura`:** Módulo SIGI de inspecciones técnicas de campo.
-12. **`hallazgos_inspeccion`:** Detalle de daños o riesgos identificados en inspecciones.
-13. **`configuracion_sistema`:** Parámetros operativos generales (auto-asignación, modo mantenimiento).
+5. **`ticket_tecnicos`:** Relación muchos-a-muchos para designación multitécnico (`ticket_id`, `tecnico_id`, `rol_asignacion` ENUM('PRINCIPAL', 'APOYO'), `creado_en`). Exclusivo para módulo OTIC bajo complejidad crítica (`COMPLEJA`), con integridad referencial en cascada.
+6. **`comentarios_ticket`:** Mensajería bidireccional entre solicitante y técnico, con soporte de notas internas confidenciales (`es_nota_interna = true`).
+7. **`adjuntos`:** Registro de evidencias subidas con nombre original, nombre criptográfico en disco, tamaño y tipo MIME. Soporta evidencias de apertura y adjuntos de informe técnico en resolución.
+8. **`encuestas_satisfaccion`:** Evaluación de calidad post-atención (1 a 5 estrellas, comentario, vinculación a `solicitante_id` y `tecnico_id`).
+9. **`logs_auditoria`:** Trazabilidad forense inmutable (registra IP, usuario, acción, campos y valores anteriores/nuevos).
+10. **`materiales_inventario_sg`:** Catálogo de 31 repuestos e insumos de talleres para Servicios Generales.
+11. **`materiales_movimientos_sg`:** Kardex de despacho de materiales asociados a órdenes de trabajo.
+12. **`inspecciones_infraestructura`:** Módulo SIGI de inspecciones técnicas de campo.
+13. **`hallazgos_inspeccion`:** Detalle de daños o riesgos identificados en inspecciones.
+14. **`configuracion_sistema`:** Parámetros operativos generales (auto-asignación, modo mantenimiento).
 
 ---
 
@@ -132,11 +134,11 @@ Todas las rutas están prefijadas por `/api` y requieren cabecera `Authorization
 
 ### 4.2. Módulo de Tickets (`/api/tickets`)
 * `GET /api/tickets`: Listado paginado de tickets según rol (el solicitante solo ve los suyos; el técnico ve sus asignados; la mesa de ayuda ve la cola global).
-* `GET /api/tickets/:id`: Consulta detallada de ticket con línea de tiempo, comentarios públicos, notas internas (si es técnico/admin) y adjuntos.
+* `GET /api/tickets/:id`: Consulta detallada de ticket con línea de tiempo, comentarios públicos, notas internas (si es técnico/admin), adjuntos y equipo de técnicos asignados (`tecnicos_asignados`, `tecnicos_adicionales`).
 * `POST /api/tickets`: Creación de nuevo ticket (`multipart/form-data`) con carga de evidencias.
-* `PUT /api/tickets/:id/assign`: Asignación o reasignación de especialista técnico por Mesa de Ayuda.
-* `PUT /api/tickets/:id/status`: Transición de estado ITIL (`EN_EJECUCION`, `OBSERVADO`, etc.).
-* `PUT /api/tickets/:id/resolve`: Cierre técnico con informe de diagnóstico y cálculo automático de SLA.
+* `PUT /api/tickets/:id/assign`: Asignación o reasignación por Mesa de Ayuda. Admite `tecnicoId`, `complejidad` y `tecnicosAdicionalesIds` (habilita designación multitécnico colaborativo exclusivamente para módulo OTIC en complejidad crítica `COMPLEJA`).
+* `PUT /api/tickets/:id/status`: Transición de estado ITIL (`EN_EJECUCION`, `OBSERVADO`, `RESUELTO`). Admite `multipart/form-data` con campo `archivo` opcional para subir informe técnico o documento digital adjunto en la resolución.
+* `PUT /api/tickets/:id/resolve`: Cierre técnico con informe de diagnóstico, adjunto de documento digital opcional y cálculo automático de SLA.
 * `POST /api/tickets/:id/comments`: Envío de mensaje público o nota interna confidencial.
 * `POST /api/tickets/:id/survey`: Registro de encuesta de satisfacción (1 a 5 estrellas). Solo permitido al solicitante propietario del ticket resuelto.
 

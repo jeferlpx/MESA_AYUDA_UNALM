@@ -2,6 +2,13 @@
 
 Sistema enterprise de gestión de tickets, incidentes y solicitudes de servicio para la **Oficina de Tecnologías de la Información y Comunicaciones (OTIC)** de la **Universidad Nacional Agraria La Molina (UNALM)**.
 
+### ✨ Capacidades Principales
+- **Arquitectura Multimódulo:** Atención especializada independiente para **OTIC** e infraestructura de **Servicios Generales**.
+- **Asignación Multitécnico Colaborativo (Exclusivo OTIC):** Conformación de equipos de intervención (1 Técnico Principal + N Técnicos de Apoyo) cuando la complejidad técnica es crítica o altamente especializada (`COMPLEJA`).
+- **Resolución con Informe Técnico Digital (Opcional):** Los técnicos pueden adjuntar documentación formal (.pdf, .docx, imágenes) al momento de registrar la solución.
+- **Medición de SLAs Automatizada:** Tiempos de primera respuesta y resolución computados en tiempo real con ponderación por complejidad técnica.
+- **Encuestas de Calidad y Calificación:** Evaluación de satisfacción obligatoria de 1 a 5 estrellas para el cierre formal del ticket.
+
 ---
 
 ## 📌 Requisitos de Entorno y Variables de Configuración

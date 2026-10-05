@@ -51,6 +51,8 @@ El sistema proporciona una plataforma web centralizada para la recepción, triaj
 | **RF-12** | **Kardex y Solicitud de Materiales para Órdenes de Trabajo** | El sistema debe mantener el catálogo de 31 insumos y materiales de almacén/talleres SG, permitiendo al técnico solicitar ítems asociados a un ticket y descontando existencias en el inventario institucional. | **Media** | Personal SG / Almacén |
 | **RF-13** | **Panel de Métricas y KPIs de Gestión para Jefaturas** | Los supervisores y administradores deben disponer de un dashboard analítico con indicadores en tiempo real: volumen total de tickets, tasa de cumplimiento de SLA, distribución por categoría y ranking de satisfacción docente/estudiantil. | **Media** | Supervisor / Admin |
 | **RF-14** | **Auditoría Forense Inmutable de Transacciones** | Cada evento crítico (creación, cambio de estado, asignación, reasignación, carga de archivos y calificación) debe quedar grabado de manera permanente en la tabla de auditoría con identificación de usuario, acción, valores antes/después, fecha, hora e IP de origen. | **Alta** | Sistema |
+| **RF-15** | **Asignación Multitécnico según Complejidad Técnica (Exclusivo OTIC)** | Cuando Mesa de Ayuda OTIC clasifica el Nivel de Complejidad Técnica en "Crítica / Muy Compleja — Especializada" (`COMPLEJA`), el sistema debe permitir asignar múltiples especialistas técnicos a un mismo ticket (1 Técnico Principal y N Técnicos de Apoyo). Los técnicos de apoyo visualizan el ticket en su cola de trabajo, reciben notificaciones y pueden intervenir/resolverlo. En tickets de menor complejidad (Baja/Media/Alta) o pertenecientes a Servicios Generales (`SERVICIOS_GENERALES`), la asignación se restringe estrictamente a un único técnico. | **Alta** | Mesa de Ayuda OTIC / Supervisor |
+| **RF-16** | **Adjunto de Informe Técnico o Documento Digital en Resolución (Opcional)** | Al resolver o cerrar la atención técnica de un ticket, el técnico debe disponer de una opción interactiva para adjuntar un archivo formal de respaldo (informe técnico en formato PDF, Word, Excel o evidencias fotográficas adicionales). El documento se almacena en el volumen seguro, se registra en la tabla `adjuntos` y genera trazabilidad en la auditoría (`ADJUNTAR_ARCHIVO`), quedando accesible para el solicitante y la supervisión. | **Media** | Técnico / Especialista |
 
 ---
 
@@ -103,6 +105,8 @@ El sistema proporciona una plataforma web centralizada para la recepción, triaj
 | **RF-12** | `SGInventoryPage.tsx` / `materiales_inventario_sg` | 31 insumos registrados y vinculados a órdenes de trabajo | **CONFORME** |
 | **RF-13** | `AdminDashboardPage.tsx` / KPIs en tiempo real | Gráficos estadísticos y métricas de soporte en vivo | **CONFORME** |
 | **RF-14** | `logs_auditoria` con trigger de aplicación | Registro de IP, fecha, usuario y cambio en BD | **CONFORME** |
+| **RF-15** | `ticket_tecnicos` / Asignación multitécnico OTIC | Asignación colaborativa validada en tickets de complejidad crítica OTIC | **CONFORME** |
+| **RF-16** | Modal de resolución + `handleFlexibleUpload` | Carga de informe técnico opcional en resolución persistido en `/app/uploads` | **CONFORME** |
 | **RNF-SEG**| BCrypt hash, JWT 24h, Variables `.env` protegidas | Auditoría de código limpia y repositorio GitHub sin secretos | **CONFORME** |
 | **RNF-REND**| Express + Vite + Pool MySQL 20 conexiones | Latencia < 250ms en pruebas locales | **CONFORME** |
 | **RNF-DISP**| Docker Compose con política `restart: always` | Contenedores frontend y backend operativos al 100% | **CONFORME** |
@@ -111,7 +115,7 @@ El sistema proporciona una plataforma web centralizada para la recepción, triaj
 
 ## 6. ACTA DE CONFORMIDAD Y FIRMAS DE APROBACIÓN
 
-Por medio de la presente, se hace constar que los **Requisitos Funcionales (14)** y **Requisitos No Funcionales (15)** descritos en este documento han sido exhaustivamente desarrollados, validados en el ambiente de pruebas controlado (`http://172.16.20.49/`) y sincronizados en el repositorio institucional oficial (`https://github.com/otic-unalm/MESA_DE_AYUDA`).
+Por medio de la presente, se hace constar que los **Requisitos Funcionales (16)** y **Requisitos No Funcionales (15)** descritos en este documento han sido exhaustivamente desarrollados, validados en el ambiente de pruebas controlado (`http://172.16.20.49/`) y sincronizados en el repositorio institucional oficial (`https://github.com/otic-unalm/MESA_DE_AYUDA`).
 
 Habiéndose verificado el cumplimiento estricto del flujo operativo institucional, los criterios de aceptación y las políticas de seguridad de la información de la UNALM, se suscribe la presente acta otorgando la **CONFORMIDAD TÉCNICA TOTAL**:
 

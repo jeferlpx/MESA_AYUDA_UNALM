@@ -16,6 +16,8 @@ El sistema opera bajo los principios de **ITIL v4**:
 - **Catálogo de Servicios estructurado** con niveles de servicio (SLA) de respuesta y resolución parametrizables.
 - **Ciclo de vida del ticket:** Registro, Asignación, Inspección técnica, Requerimiento de materiales, Resolución y Encuesta de satisfacción.
 - **Multimódulo independiente:** Soporte técnico informático (**OTIC**) y mantenimiento de infraestructura (**Servicios Generales**).
+- **Asignación Colaborativa Multitécnico (Exclusivo OTIC):** Designación de equipo técnico (1 Principal y N Apoyo) cuando la complejidad técnica es crítica (`COMPLEJA`), manteniendo asignación simple para Servicios Generales.
+- **Evidencias Digitales e Informes Técnicos:** Carga de evidencias en apertura y adjunto opcional de informe técnico digital (.pdf, .docx, imágenes) en la resolución.
 - **Notificaciones automatizadas vía SMTP institucional** en cada cambio de estado clave.
 - **Trazabilidad y auditoría completa** (registro de cambios por IP y usuario).
 
