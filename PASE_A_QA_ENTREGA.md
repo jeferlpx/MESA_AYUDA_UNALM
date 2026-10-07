@@ -35,7 +35,7 @@ Se completó y estabilizó la versión para pruebas funcionales e integrales del
 | **Nombre de Base de Datos:** | `mesaayuda_db` |
 | **Credenciales BD para DBA/Redes:** | Coordinar con DBA / Redes OTIC (configuración gestionada vía variables de entorno en `.env`) |
 | **Datos de Prueba Iniciales:** | Precargados mediante [`schema2.sql`](file:///var/www/mesa-ayuda/schema2.sql) (1,363 usuarios, 12 categorías, 31 insumos, 4 tickets de prueba) |
-| **Limitaciones Conocidas:** | Las notificaciones por correo electrónico operan actualmente en modo simulador (se registran en los logs de auditoría y consola del backend) hasta habilitar las credenciales SMTP de producción en el archivo `.env`. |
+| **Notificaciones por Correo:** | Notificador SMTP activo en tiempo real (`notificaciones.mesadeayuda@lamolina.edu.pe` vía TLS 587) para Solicitante, Técnicos y Mesa de Ayuda. |
 
 ---
 
