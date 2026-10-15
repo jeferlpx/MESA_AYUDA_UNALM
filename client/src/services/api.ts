@@ -98,6 +98,10 @@ export const api = {
   // Auth
   login: (email: string, password: string) => 
     apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  ldapLogin: (username: string, password: string) =>
+    apiFetch('/auth/ldap-login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  getLdapStatus: () =>
+    apiFetch('/auth/ldap-status'),
   register: (data: { nombres?: string; apellidos?: string; nombreCompleto?: string; email: string; password: string; facultadDependencia: string; telefono?: string; anexo?: string }) => 
     apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   getProfile: () => 

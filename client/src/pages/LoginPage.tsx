@@ -26,10 +26,16 @@ import {
   Headphones,
   PhoneCall,
   Image as ImageIcon,
+  Network,
+  Server,
+  Info,
+  Copy,
+  Check,
+  X,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, loginWithLdap } = useAuth();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
 
   // Background Image State (Configurado institucionalmente por Admin General)
@@ -44,6 +50,10 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingLdap, setLoadingLdap] = useState(false);
+  const [showLdapModal, setShowLdapModal] = useState(false);
+  const [copiedLdapSpecs, setCopiedLdapSpecs] = useState(false);
+  const [ldapStatus, setLdapStatus] = useState<any>(null);
 
   // Registration Form State
   const [regNombreCompleto, setRegNombreCompleto] = useState('');
@@ -75,6 +85,81 @@ export const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLdapLoginSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+
+    const cleanIdentifier = email.trim();
+    if (!cleanIdentifier) {
+      setError('Por favor ingrese su usuario de red institucional (ej: agarcia o agarcia@lamolina.edu.pe)');
+      return;
+    }
+
+    if (!password) {
+      setError('Por favor ingrese la contraseña de su cuenta de dominio institucional');
+      return;
+    }
+
+    setLoadingLdap(true);
+    try {
+      await loginWithLdap(cleanIdentifier, password);
+    } catch (err: any) {
+      setError(err.message || 'Error en la autenticación con Directorio Activo (LDAP)');
+    } finally {
+      setLoadingLdap(false);
+    }
+  };
+
+  const handleOpenLdapModal = async () => {
+    setShowLdapModal(true);
+    try {
+      const res = await api.getLdapStatus();
+      if (res.success && res.data) {
+        setLdapStatus(res.data);
+      }
+    } catch {
+      // Ignorar error al cargar estado
+    }
+  };
+
+  const handleCopyLdapSpecs = () => {
+    const specsText = `=============================================================================
+REQUERIMIENTOS TÉCNICOS PARA INTEGRACIÓN DE DIRECTORIO ACTIVO (LDAP)
+SISTEMA DE MESA DE AYUDA - UNALM
+=============================================================================
+Servidor de la Mesa de Ayuda: 172.16.20.49
+Dominio Institucional: lamolina.edu.pe
+
+Datos solicitados al Administrador de Redes OTIC:
+1. IP o Hostname del Servidor de Directorio Activo (Domain Controller):
+   Ejemplo: 172.16.0.X o dc01.lamolina.edu.pe
+
+2. Puerto de Conexión y Protocolo de Seguridad:
+   - Puerto 389 (LDAP estándar / STARTTLS)
+   - O Puerto 636 (LDAPS seguro con SSL)
+
+3. Base DN (Distinguished Name):
+   Ejemplo: DC=lamolina,DC=edu,DC=pe (o la OU donde residen los usuarios)
+
+4. Cuenta de Servicio de Dominio (Service Account / Bind User):
+   - Usuario de servicio con permisos de SOLO LECTURA en el árbol de Active Directory
+   - Formato aceptado:
+     * UPN: svc_mesaayuda@lamolina.edu.pe
+     * DN: CN=svc_mesaayuda,OU=ServiceAccounts,DC=lamolina,DC=edu,DC=pe
+     * o Formato NT: LAMOLINA\\svc_mesaayuda
+   - Contraseña de dicha cuenta de servicio
+
+5. Reglas de Conectividad de Red y Firewall:
+   - Habilitar comunicación TCP desde el host de Mesa de Ayuda (172.16.20.49)
+     hacia el Domain Controller en el puerto LDAP correspondiente (389 o 636).
+=============================================================================`;
+
+    navigator.clipboard.writeText(specsText);
+    setCopiedLdapSpecs(true);
+    setTimeout(() => setCopiedLdapSpecs(false), 3000);
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -367,21 +452,86 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Submit Button (Local / Database Credentials) */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || loadingLdap}
                 className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-unalm-600 to-unalm-700 hover:from-unalm-500 hover:to-unalm-600 focus:outline-none focus:ring-2 focus:ring-unalm-500 shadow-lg shadow-unalm-900/50 transition-all cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <span className="flex items-center space-x-2">
-                    <span>Ingresar al Sistema</span>
+                    <span>Ingresar con Cuenta Local</span>
                     <ArrowRight className="w-4 h-4" />
                   </span>
                 )}
               </button>
+
+              {/* Separador Institucional LDAP */}
+              <div className="relative my-3 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-800" />
+                </div>
+                <div className="relative px-3 bg-slate-900 text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center space-x-1.5">
+                  <Network className="w-3 h-3 text-sky-400" />
+                  <span>o con credenciales de dominio</span>
+                </div>
+              </div>
+
+              {/* Botón de Acceso con Directorio Activo (LDAP UNALM) */}
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={handleLdapLoginSubmit}
+                  disabled={loading || loadingLdap}
+                  className="w-full relative group overflow-hidden rounded-xl border border-sky-500/40 hover:border-sky-400 bg-gradient-to-r from-sky-950/60 via-slate-950 to-indigo-950/60 hover:from-sky-900/50 hover:to-indigo-900/50 p-2.5 text-xs font-bold text-white shadow-lg hover:shadow-sky-500/20 transition-all duration-200 cursor-pointer disabled:opacity-50 flex items-center justify-between"
+                  title="Ingreso institucional validando con el Controlador de Dominio de lamolina.edu.pe"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-300 group-hover:scale-105 group-hover:bg-sky-500/30 transition-all">
+                      <Network className="w-4 h-4 text-sky-400" />
+                    </div>
+                    <div className="text-left">
+                      <div className="flex items-center space-x-1.5 leading-tight">
+                        <span className="text-white font-bold text-xs">Ingresar con Directorio Activo</span>
+                        <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40 text-[9px] font-mono font-bold">
+                          LDAP
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-normal block">
+                        Dominio institucional @lamolina.edu.pe
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-1 text-sky-400 group-hover:text-sky-300">
+                    {loadingLdap ? (
+                      <div className="w-4 h-4 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span className="text-[11px] font-bold hidden sm:inline">Validar</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </>
+                    )}
+                  </div>
+                </button>
+
+                <div className="flex items-center justify-between px-1 text-[11px]">
+                  <span className="text-slate-400 flex items-center space-x-1">
+                    <Server className="w-3 h-3 text-sky-400" />
+                    <span>Dominio: <strong className="text-slate-300">lamolina.edu.pe</strong></span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleOpenLdapModal}
+                    className="text-sky-400 hover:text-sky-300 font-medium underline flex items-center space-x-1 cursor-pointer transition-colors"
+                  >
+                    <Info className="w-3 h-3" />
+                    <span>Parámetros requeridos de Red</span>
+                  </button>
+                </div>
+              </div>
 
               {/* Quick Demo Pre-fills */}
               <div className="pt-4 border-t border-slate-800">
@@ -739,6 +889,123 @@ export const LoginPage: React.FC = () => {
           Universidad Nacional Agraria La Molina • Mesa de Ayuda Institucional
         </p>
       </div>
+
+      {/* Modal de Requerimientos Técnicos e Información de Directorio Activo (LDAP) */}
+      {showLdapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-6 text-slate-100 relative max-h-[90vh] overflow-y-auto">
+            {/* Botón Cerrar */}
+            <button
+              type="button"
+              onClick={() => setShowLdapModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Cerrar ventana"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Encabezado */}
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400 shrink-0">
+                <Network className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                  <span>Directorio Activo (LDAP UNALM)</span>
+                  <span className="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-400/30 text-[10px] text-sky-300 font-mono">
+                    lamolina.edu.pe
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Autenticación institucional de red y dominio
+                </p>
+              </div>
+            </div>
+
+            {/* Estado de Configuración del Servidor */}
+            <div className="mb-4 p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-start space-x-3 text-xs">
+              <Server className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-300">Estado de Enlace LDAP:</span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      ldapStatus?.configured
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
+                    {ldapStatus?.configured ? '● Vinculado' : '▲ Pendiente de Datos de Red'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  {ldapStatus?.statusMessage ||
+                    'El motor de autenticación LDAP de la Mesa de Ayuda está listo. Para completar la conexión institucional se requiere que el Administrador de Red configure la IP del Domain Controller y la cuenta de servicio en el archivo .env.'}
+                </p>
+              </div>
+            </div>
+
+            {/* ¿Cómo funciona el acceso? */}
+            <div className="mb-4 space-y-1.5 text-xs text-slate-300">
+              <span className="font-bold text-white block">Instrucciones de Ingreso:</span>
+              <div className="text-slate-400 leading-relaxed text-[11px] space-y-1 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80">
+                <p>1. Ingrese su usuario institucional (ej: <code className="text-sky-300 bg-slate-900 px-1 py-0.5 rounded">agarcia</code> o <code className="text-sky-300 bg-slate-900 px-1 py-0.5 rounded">agarcia@lamolina.edu.pe</code>).</p>
+                <p>2. Ingrese su contraseña de red o inicio de sesión de Windows del dominio UNALM.</p>
+                <p>3. Presione el botón <strong className="text-sky-300 font-semibold">"Ingresar con Directorio Activo (LDAP)"</strong>.</p>
+                <p>4. El sistema verificará sus credenciales con el Domain Controller y registrará su perfil automáticamente.</p>
+              </div>
+            </div>
+
+            {/* Requerimientos Técnicos para el Administrador de Redes */}
+            <div className="mb-4 rounded-2xl border border-sky-800/40 bg-sky-950/20 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-sky-200 flex items-center space-x-1.5">
+                  <Shield className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Datos Requeridos para el Administrador de Red:</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyLdapSpecs}
+                  className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-sky-600/30 hover:bg-sky-600/50 text-sky-200 border border-sky-500/40 text-[10px] font-bold transition-all cursor-pointer"
+                  title="Copiar texto para enviar al Administrador de Red"
+                >
+                  {copiedLdapSpecs ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-400" />
+                      <span className="text-emerald-300">¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3 text-sky-300" />
+                      <span>Copiar Solicitud</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="text-[11px] text-slate-300 space-y-1 font-mono bg-slate-950/90 p-2.5 rounded-xl border border-slate-800 overflow-x-auto">
+                <div><span className="text-sky-400 font-bold">1. IP / Hostname DC:</span> 172.16.x.x o dc01.lamolina.edu.pe</div>
+                <div><span className="text-sky-400 font-bold">2. Puerto y Protocolo:</span> 389 (LDAP/StartTLS) o 636 (LDAPS SSL)</div>
+                <div><span className="text-sky-400 font-bold">3. Base DN:</span> DC=lamolina,DC=edu,DC=pe</div>
+                <div><span className="text-sky-400 font-bold">4. Usuario de Servicio:</span> svc_mesaayuda@lamolina.edu.pe (Solo lectura)</div>
+                <div><span className="text-sky-400 font-bold">5. Contraseña:</span> [Contraseña de la cuenta de servicio]</div>
+                <div><span className="text-sky-400 font-bold">6. Servidor Mesa Ayuda:</span> 172.16.20.49 (Permitir en Firewall)</div>
+              </div>
+            </div>
+
+            {/* Botón Aceptar */}
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLdapModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

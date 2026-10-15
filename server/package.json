@@ -1,6 +1,6 @@
 {
   "name": "mesa-ayuda-otic-backend",
-  "version": "1.0.0",
+  "version": "2.5.0",
   "description": "Backend API para Mesa de Ayuda OTIC UNALM (ITIL v4 Ready)",
   "main": "dist/app.js",
   "scripts": {
@@ -25,6 +25,7 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "ldapts": "^9.2.0",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.9.7",
     "nodemailer": "^9.0.5",

@@ -32,4 +32,13 @@ export const env = {
   SMTP_FROM: process.env.SMTP_FROM || '"Mesa de Ayuda OTIC UNALM" <mesadeayuda.otic@lamolina.edu.pe>',
   MESA_AYUDA_EMAIL: process.env.MESA_AYUDA_EMAIL || 'mesaayuda.otic@lamolina.edu.pe',
   APP_URL: process.env.APP_URL || 'https://www.lamolina.edu.pe/pruebas1/david/mesa_ayuda',
+
+  // Configuración Directorio Activo (Active Directory / LDAP - UNALM)
+  LDAP_ENABLED: process.env.LDAP_ENABLED !== 'false',
+  LDAP_URL: process.env.LDAP_URL || '',
+  LDAP_BASE_DN: process.env.LDAP_BASE_DN || 'DC=lamolina,DC=edu,DC=pe',
+  LDAP_DOMAIN: process.env.LDAP_DOMAIN || 'lamolina.edu.pe',
+  LDAP_BIND_DN: process.env.LDAP_BIND_DN || '',
+  LDAP_BIND_PASSWORD: process.env.LDAP_BIND_PASSWORD || '',
+  LDAP_TIMEOUT_MS: parseInt(process.env.LDAP_TIMEOUT_MS || '5000', 10),
 };

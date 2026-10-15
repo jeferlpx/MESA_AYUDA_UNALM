@@ -44,3 +44,10 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 .DS_Store
+
+# Certificados y claves SSL privadas
+ssl/
+client/ssl/
+certificado https/
+*.key
+*.pem

@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithLdap: (username: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   updateUser: (updatedFields: Partial<User>) => void;
@@ -76,6 +77,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithLdap = async (username: string, password: string) => {
+    const res = await api.ldapLogin(username, password);
+    if (res.success && res.data?.token) {
+      localStorage.setItem('otic_token', res.data.token);
+      setUser(res.data.user);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('otic_token');
     setUser(null);
@@ -87,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         loading,
         login,
+        loginWithLdap,
         logout,
         refreshUser,
         updateUser,

@@ -6,6 +6,7 @@ import { env } from '../config/env';
 import { validateUnalmEmail, AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { UserTokenPayload } from '../types';
 import { validatePeruvianPhone } from '../utils/phoneValidator';
+import { LdapService } from '../services/ldap.service';
 
 export class AuthController {
   static async login(req: Request, res: Response) {
@@ -103,6 +104,134 @@ export class AuthController {
       return res.status(500).json({
         success: false,
         message: 'Error al procesar el inicio de sesión',
+      });
+    }
+  }
+
+  /**
+   * Autenticación con Directorio Activo (LDAP) de la UNALM
+   */
+  static async ldapLogin(req: Request, res: Response) {
+    try {
+      const username = (req.body.username || req.body.email || req.body.identifier || '').trim();
+      const { password } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Debe ingresar su usuario de red institucional o correo (@lamolina.edu.pe) y contraseña',
+        });
+      }
+
+      const authResult = await LdapService.authenticate(username, password);
+
+      if (!authResult.success || !authResult.user) {
+        return res.status(401).json({
+          success: false,
+          message: authResult.message || 'Credenciales de Directorio Activo inválidas o error de conexión con el dominio.',
+          configured: authResult.configured !== false,
+        });
+      }
+
+      const ldapUser = authResult.user;
+
+      // Buscar si el usuario ya existe en la base de datos local
+      let user = await UserModel.findByEmail(ldapUser.email);
+
+      if (!user) {
+        // Auto-aprovisionar usuario con rol Solicitante (id: 4)
+        const randomPasswordHash = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(), 10);
+        const newUserId = await UserModel.createUser({
+          nombres: ldapUser.nombres,
+          apellidos: ldapUser.apellidos,
+          email: ldapUser.email,
+          passwordHash: randomPasswordHash,
+          rolId: 4, // Rol SOLICITANTE
+          facultadDependencia: ldapUser.facultadDependencia || 'Comunidad Universitaria UNALM',
+          cargo: ldapUser.cargo || 'Usuario Institucional',
+          telefono: ldapUser.telefono,
+          anexo: ldapUser.anexo,
+        });
+
+        user = await UserModel.findById(newUserId);
+      } else {
+        if (user.estado === 'BLOQUEADO') {
+          return res.status(403).json({
+            success: false,
+            message: 'Su cuenta se encuentra bloqueada en la Mesa de Ayuda. Por favor comuníquese con OTIC.',
+          });
+        }
+        await UserModel.updateLastLogin(user.id);
+      }
+
+      if (!user) {
+        return res.status(500).json({
+          success: false,
+          message: 'Error al cargar o registrar el perfil de usuario desde Directorio Activo.',
+        });
+      }
+
+      const payload: UserTokenPayload = {
+        id: user.id,
+        email: user.email,
+        nombres: user.nombres,
+        apellidos: user.apellidos,
+        rol: user.rol_codigo,
+        rol_id: user.rol_id,
+        facultad_dependencia: user.facultad_dependencia,
+        cargo: user.cargo,
+      };
+
+      const token = jwt.sign(payload, env.JWT_SECRET, {
+        expiresIn: (env.JWT_EXPIRES_IN || '8h') as any,
+      });
+
+      return res.json({
+        success: true,
+        message: 'Autenticación exitosa con Directorio Activo UNALM',
+        data: {
+          token,
+          authType: 'LDAP',
+          user: {
+            id: user.id,
+            nombres: user.nombres,
+            apellidos: user.apellidos,
+            email: user.email,
+            rol: user.rol_codigo,
+            rolNombre: user.rol_nombre,
+            facultadDependencia: user.facultad_dependencia,
+            cargo: user.cargo,
+            telefono: user.telefono,
+            anexo: user.anexo,
+            fotoPerfil: user.foto_perfil,
+            debeCambiarPassword: false,
+            correoPendiente: false,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error('[AuthController.ldapLogin error]:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error al procesar el inicio de sesión con Directorio Activo',
+      });
+    }
+  }
+
+  /**
+   * Obtiene el estado de conexión del servicio de Directorio Activo (LDAP)
+   */
+  static async ldapStatus(_req: Request, res: Response) {
+    try {
+      const status = LdapService.getStatus();
+      return res.json({
+        success: true,
+        data: status,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error al obtener estado de LDAP',
       });
     }
   }
