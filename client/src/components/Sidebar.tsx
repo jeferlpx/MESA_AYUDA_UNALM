@@ -52,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
       };
     }
   }, [user?.id, activeTab]);
-  const isSpecialist = user?.rol && ['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'TECNICO', 'TECNICO_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG'].includes(user.rol);
+  const isSpecialist = user?.rol && ['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG'].includes(user.rol);
   const isAdmin = user?.rol && ['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol);
   const isMesaAyuda = user?.rol === 'MESA_AYUDA';
   const isMesaAyudaSG = user?.rol === 'MESA_AYUDA_SG';

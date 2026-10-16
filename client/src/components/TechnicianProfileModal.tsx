@@ -31,7 +31,7 @@ export const TechnicianProfileModal: React.FC<TechnicianProfileModalProps> = ({
 }) => {
   const { user } = useAuth();
   const isAdminOrSupervisor = user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR';
-  const isTechnician = user?.rol === 'TECNICO' || user?.rol === 'TECNICO_SG';
+  const isTechnician = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol));
 
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<any>(null);

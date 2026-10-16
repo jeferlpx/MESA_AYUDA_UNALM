@@ -331,12 +331,14 @@ SET FOREIGN_KEY_CHECKS = 0;
 INSERT INTO `roles` (`id`, `codigo`, `nombre`, `descripcion`) VALUES
 (1, 'ADMIN', 'Administrador General OTIC', 'Control total de usuarios, SLAs y catálogo'),
 (2, 'SUPERVISOR', 'Jefe / Supervisor OTIC', 'Asignación de tickets, monitoreo SLA y reportes'),
-(3, 'TECNICO', 'Especialista / Técnico OTIC', 'Atención y resolución de tickets de soporte'),
+(3, 'TECNICO', 'Especialista en Soporte Técnico', 'Atención y resolución técnica de soporte a usuarios y equipos de cómputo'),
 (4, 'SOLICITANTE', 'Usuario Final UNALM', 'Alumnos, docentes y administrativos que registran requerimientos'),
 (5, 'MESA_AYUDA', 'Mesa de Ayuda OTIC', 'Triage, derivación y gestión de colas de tickets OTIC'),
 (6, 'MESA_AYUDA_SG', 'Mesa de Ayuda Servicios Generales', 'Triage, derivación y gestión de colas de tickets de Servicios Generales e Infraestructura'),
 (7, 'TECNICO_SG', 'Especialista Servicios Generales', 'Atención y resolución técnica en rubros de mantenimiento e infraestructura (ROF UNALM)'),
-(8, 'SUPERVISOR_SG', 'Supervisor Servicios Generales', 'Jefatura y supervisión de la Unidad de Servicios Generales y Mantenimiento');
+(8, 'SUPERVISOR_SG', 'Supervisor Servicios Generales', 'Jefatura y supervisión de la Unidad de Servicios Generales y Mantenimiento'),
+(9, 'ESPECIALISTA_REDES', 'Especialista en Redes', 'Atención y resolución técnica de incidencias en conectividad, cableado, fibra óptica y switches'),
+(10, 'ESPECIALISTA_DESARROLLO', 'Especialista en Desarrollo', 'Atención y resolución técnica en sistemas, software, bases de datos y portales web');
 
 -- -----------------------------------------------------------------------------
 -- 2. Configuración Inicial del Sistema

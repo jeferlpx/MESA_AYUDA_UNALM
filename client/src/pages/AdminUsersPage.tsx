@@ -31,12 +31,14 @@ import {
 const ROLES_INFO: Record<number, { codigo: string; nombre: string; color: string }> = {
   1: { codigo: 'ADMIN', nombre: 'Administrador General', color: 'bg-purple-100 text-purple-800 border-purple-200' },
   2: { codigo: 'SUPERVISOR', nombre: 'Supervisor / Jefatura OTIC', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-  3: { codigo: 'TECNICO', nombre: 'Técnico Especialista OTIC', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  3: { codigo: 'TECNICO', nombre: 'Especialista en Soporte Técnico', color: 'bg-blue-100 text-blue-800 border-blue-200' },
   4: { codigo: 'SOLICITANTE', nombre: 'Usuario Solicitante (Comunidad UNALM)', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   5: { codigo: 'MESA_AYUDA', nombre: 'Mesa de Ayuda OTIC (Triage)', color: 'bg-amber-100 text-amber-800 border-amber-300' },
   6: { codigo: 'MESA_AYUDA_SG', nombre: 'Mesa de Ayuda Serv. Generales (Triage)', color: 'bg-amber-100 text-amber-900 border-amber-400' },
   7: { codigo: 'TECNICO_SG', nombre: 'Especialista Serv. Generales (ROF 2023)', color: 'bg-orange-100 text-orange-900 border-orange-300' },
   8: { codigo: 'SUPERVISOR_SG', nombre: 'Supervisor / Jefatura Serv. Generales', color: 'bg-rose-100 text-rose-900 border-rose-300' },
+  9: { codigo: 'ESPECIALISTA_REDES', nombre: 'Especialista en Redes', color: 'bg-teal-100 text-teal-800 border-teal-300' },
+  10: { codigo: 'ESPECIALISTA_DESARROLLO', nombre: 'Especialista en Desarrollo', color: 'bg-cyan-100 text-cyan-800 border-cyan-300' },
 };
 
 const UNALM_DEPENDENCIAS = UNALM_DEPENDENCIAS_LIST;
@@ -155,6 +157,8 @@ export const AdminUsersPage: React.FC = () => {
       MESA_AYUDA_SG: 6,
       TECNICO_SG: 7,
       SUPERVISOR_SG: 8,
+      ESPECIALISTA_REDES: 9,
+      ESPECIALISTA_DESARROLLO: 10,
     };
     setFormRolId(user.rolId || roleMapping[user.rol] || 3);
     setFormDependencia(user.facultadDependencia);
@@ -357,7 +361,9 @@ export const AdminUsersPage: React.FC = () => {
           <option value="">Todos los Roles</option>
           <option value="1">Administrador General</option>
           <option value="5">Mesa de Ayuda OTIC (Triage)</option>
-          <option value="3">Técnico Especialista OTIC</option>
+          <option value="3">Especialista en Soporte Técnico</option>
+          <option value="9">Especialista en Redes</option>
+          <option value="10">Especialista en Desarrollo</option>
           <option value="2">Supervisor OTIC</option>
           <option value="6">Mesa de Ayuda Serv. Generales (Triage)</option>
           <option value="7">Especialista Serv. Generales (ROF 2023)</option>
@@ -427,7 +433,7 @@ export const AdminUsersPage: React.FC = () => {
               ) : (
                 paginatedUsers.map((u) => {
                   const roleBadge = ROLES_INFO[u.rolId] || ROLES_INFO[4];
-                  const isTech = u.rol === 'TECNICO' || u.rol === 'TECNICO_SG';
+                  const isTech = ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(u.rol);
                   const isEmailMissing = u.email.toLowerCase().startsWith('sin_correo_') || u.correoPendiente || u.email === '#N/D';
                   const isDependenciaMissing = !u.facultadDependencia || u.facultadDependencia.trim() === '#N/D';
 
@@ -683,7 +689,9 @@ export const AdminUsersPage: React.FC = () => {
               >
                 <option value={1}>Administrador General</option>
                 <option value={5}>Mesa de Ayuda OTIC (Triage)</option>
-                <option value={3}>Técnico Especialista OTIC</option>
+                <option value={3}>Especialista en Soporte Técnico</option>
+                <option value={9}>Especialista en Redes</option>
+                <option value={10}>Especialista en Desarrollo</option>
                 <option value={2}>Supervisor / Jefe OTIC</option>
                 <option value={6}>Mesa de Ayuda Serv. Generales (Triage)</option>
                 <option value={7}>Especialista Serv. Generales (ROF 2023)</option>
@@ -927,7 +935,9 @@ export const AdminUsersPage: React.FC = () => {
                 >
                   <option value={1}>Administrador General</option>
                   <option value={5}>Mesa de Ayuda OTIC (Triage)</option>
-                  <option value={3}>Técnico Especialista OTIC</option>
+                  <option value={3}>Especialista en Soporte Técnico</option>
+                  <option value={9}>Especialista en Redes</option>
+                  <option value={10}>Especialista en Desarrollo</option>
                   <option value={2}>Supervisor / Jefe OTIC</option>
                   <option value={6}>Mesa de Ayuda Serv. Generales (Triage)</option>
                   <option value={7}>Especialista Serv. Generales (ROF 2023)</option>

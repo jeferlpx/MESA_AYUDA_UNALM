@@ -58,11 +58,11 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
   const isSGUser = Boolean(user?.rol && ['MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG'].includes(user.rol));
   const isMesaAyudaOrAdmin = Boolean(user?.rol && ['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol));
-  const isTechnicianOnly = Boolean(user?.rol === 'TECNICO' || user?.rol === 'TECNICO_SG');
+  const isTechnicianOnly = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol));
 
   const userModule = isSGUser
     ? 'SERVICIOS_GENERALES'
-    : (user?.rol && ['MESA_AYUDA', 'TECNICO', 'SUPERVISOR'].includes(user.rol) ? 'OTIC' : undefined);
+    : (user?.rol && ['MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'SUPERVISOR'].includes(user.rol) ? 'OTIC' : undefined);
 
   // Queue Tabs: 'ALL', 'REPORTADO', 'ASIGNADO', 'RESUELTO', 'SIGI_PREVENTIVA'
   const [activeQueueTab, setActiveQueueTab] = useState<string>(isTechnicianOnly ? 'ASIGNADO' : 'REPORTADO');
@@ -428,7 +428,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
     if (selectedTicket.modulo === 'SERVICIOS_GENERALES') {
       return tec.rol === 'TECNICO_SG' || tec.rol === 'SUPERVISOR_SG';
     }
-    return tec.rol === 'TECNICO' || tec.rol === 'SUPERVISOR';
+    return ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'SUPERVISOR'].includes(tec.rol);
   });
 
   const availableCategories = categories.filter((c) => {

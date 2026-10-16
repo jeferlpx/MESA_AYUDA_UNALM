@@ -55,7 +55,7 @@ export class TicketController {
       }
 
       // Restricción para Técnicos: solo pueden ver tickets que les han sido asignados
-      if (['TECNICO', 'TECNICO_SG'].includes(req.user.rol)) {
+      if (['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(req.user.rol)) {
         const userId = req.user.id;
         const isAssigned = ticket.tecnico_id === userId || (ticket.tecnicos_asignados && ticket.tecnicos_asignados.some((a) => a.id === userId));
         if (!isAssigned) {
@@ -384,7 +384,7 @@ export class TicketController {
           });
         }
 
-        if (['TECNICO', 'TECNICO_SG'].includes(req.user.rol)) {
+        if (['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(req.user.rol)) {
           const userId = req.user.id;
           const isAssigned = ticket.tecnico_id === userId || (ticket.tecnicos_asignados && ticket.tecnicos_asignados.some((a) => a.id === userId));
           if (!isAssigned) {
@@ -737,7 +737,7 @@ export class TicketController {
     try {
       if (!req.user) return res.status(401).json({ success: false, message: 'No autenticado' });
 
-      if (!['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'TECNICO', 'TECNICO_SG'].includes(req.user.rol)) {
+      if (!['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(req.user.rol)) {
         return res.status(403).json({ success: false, message: 'No tiene permisos para derivar tickets' });
       }
 

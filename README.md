@@ -1,9 +1,10 @@
-# 🏛️ SISTEMA DE MESA DE AYUDA IN-HOUSE (OTIC UNALM) - ITIL v4 READY (v2.5.0)
+# 🏛️ SISTEMA DE MESA DE AYUDA IN-HOUSE (OTIC UNALM) - ITIL v4 READY (v2.5.1)
 
 Sistema enterprise de gestión de tickets, incidentes y solicitudes de servicio para la **Oficina de Tecnologías de la Información y Comunicaciones (OTIC)** de la **Universidad Nacional Agraria La Molina (UNALM)**.
 
 ### ✨ Capacidades Principales
-- **Autenticación con Directorio Activo (LDAP / Active Directory UNALM - v2.5.0):** Inicio de sesión corporativo integrado con el Domain Controller de la UNALM (`lamolina.edu.pe`), canal seguro LDAPS (puerto 636) y auto-aprovisionamiento de usuarios solicitantes. Ver [GUIA_INTEGRACION_DIRECTORIO_ACTIVO_LDAP.md](file:///var/www/mesa-ayuda/GUIA_INTEGRACION_DIRECTORIO_ACTIVO_LDAP.md).
+- **Autenticación con Directorio Activo (LDAP / Active Directory UNALM - v2.5.1):** Inicio de sesión corporativo integrado con el Domain Controller de la UNALM (`lamolina.edu.pe`), canal seguro LDAPS (puerto 636), botón institucional destacado en el login y auto-aprovisionamiento de perfiles. Ver [GUIA_INTEGRACION_DIRECTORIO_ACTIVO_LDAP.md](file:///var/www/mesa-ayuda/GUIA_INTEGRACION_DIRECTORIO_ACTIVO_LDAP.md).
+- **Especialidades Técnicas OTIC Diferenciadas:** Roles específicos para **Especialista en Soporte Técnico**, **Especialista en Redes** y **Especialista en Desarrollo**, además de especialistas en Infraestructura y Mantenimiento de Servicios Generales.
 - **Arquitectura Multimódulo:** Atención especializada independiente para **OTIC** e infraestructura de **Servicios Generales**.
 - **Asignación Multitécnico Colaborativo (Exclusivo OTIC):** Conformación de equipos de intervención (1 Técnico Principal + N Técnicos de Apoyo) cuando la complejidad técnica es crítica o altamente especializada (`COMPLEJA`).
 - **Resolución con Informe Técnico Digital (Opcional):** Los técnicos pueden adjuntar documentación formal (.pdf, .docx, imágenes) al momento de registrar la solución.

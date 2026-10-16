@@ -160,17 +160,17 @@ export const SearchableDependenciaSelect: React.FC<SearchableDependenciaSelectPr
       {/* Dropdown Floating Panel */}
       {isOpen && (
         <div
-          className={`absolute z-[100] left-0 right-0 mt-1.5 rounded-2xl shadow-2xl border overflow-hidden animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/20 ${
+          className={`absolute z-[150] left-0 right-0 mt-1.5 rounded-2xl shadow-2xl border overflow-hidden animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/40 ${
             isDark
-              ? 'bg-slate-900 border-slate-700 text-white shadow-slate-950/90'
+              ? 'bg-slate-950 border-slate-700 text-white shadow-2xl shadow-black'
               : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
           }`}
-          style={{ maxHeight: '420px' }}
+          style={{ maxHeight: '390px' }}
         >
           {/* Real-time Search Input Header */}
           <div
-            className={`p-3 border-b sticky top-0 z-10 backdrop-blur-md ${
-              isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-slate-50/95 border-slate-200'
+            className={`p-3 border-b sticky top-0 z-20 ${
+              isDark ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200'
             }`}
           >
             <div className="relative">
@@ -183,7 +183,7 @@ export const SearchableDependenciaSelect: React.FC<SearchableDependenciaSelectPr
                 placeholder="Escriba para filtrar en tiempo real (ej: OTIC, Agronomía, DGA, Decanato)..."
                 className={`w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm rounded-xl border outline-none font-semibold transition-all ${
                   isDark
-                    ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500 focus:border-unalm-500 focus:ring-2 focus:ring-unalm-500'
+                    ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-500 focus:border-unalm-500 focus:ring-2 focus:ring-unalm-500'
                     : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-unalm-500 focus:ring-2 focus:ring-unalm-500'
                 }`}
               />
@@ -204,7 +204,7 @@ export const SearchableDependenciaSelect: React.FC<SearchableDependenciaSelectPr
           </div>
 
           {/* Grouped Options List */}
-          <div className="overflow-y-auto max-h-72 p-2 space-y-2.5">
+          <div className={`overflow-y-auto max-h-60 sm:max-h-64 p-2 space-y-2.5 ${isDark ? 'bg-slate-950' : 'bg-white'}`}>
             {Object.keys(groupedUnits).length === 0 ? (
               <div className="p-8 text-center text-sm text-slate-400 space-y-1.5">
                 <Building2 className="w-8 h-8 mx-auto text-slate-500 opacity-50" />
@@ -220,7 +220,7 @@ export const SearchableDependenciaSelect: React.FC<SearchableDependenciaSelectPr
                   <div
                     className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-xl flex items-center space-x-2 ${
                       isDark
-                        ? 'bg-slate-950/80 text-amber-300 border border-slate-800'
+                        ? 'bg-slate-900 text-amber-300 border border-slate-800'
                         : 'bg-slate-100 text-slate-800 border border-slate-200'
                     }`}
                   >

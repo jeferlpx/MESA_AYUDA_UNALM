@@ -54,11 +54,11 @@ export class UserModel {
   }
 
   static async findAllTechnicians(modulo?: ModuleArea): Promise<UserDB[]> {
-    let rolesCondition = `('TECNICO', 'TECNICO_SG', 'SUPERVISOR', 'SUPERVISOR_SG', 'ADMIN', 'MESA_AYUDA', 'MESA_AYUDA_SG')`;
+    let rolesCondition = `('TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG', 'SUPERVISOR', 'SUPERVISOR_SG', 'ADMIN', 'MESA_AYUDA', 'MESA_AYUDA_SG')`;
     if (modulo === 'SERVICIOS_GENERALES') {
       rolesCondition = `('TECNICO_SG', 'SUPERVISOR_SG', 'MESA_AYUDA_SG')`;
     } else if (modulo === 'OTIC') {
-      rolesCondition = `('TECNICO', 'SUPERVISOR', 'MESA_AYUDA')`;
+      rolesCondition = `('TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'SUPERVISOR', 'MESA_AYUDA')`;
     }
 
     const [rows] = await dbPool.query<RowDataPacket[]>(

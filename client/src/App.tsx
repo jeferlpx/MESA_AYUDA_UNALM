@@ -33,7 +33,7 @@ const MainLayout: React.FC = () => {
         setActiveTab('admin-dashboard');
       } else if (user.rol === 'MESA_AYUDA_SG') {
         setActiveTab('sg-dashboard');
-      } else if (['MESA_AYUDA', 'TECNICO', 'TECNICO_SG'].includes(user.rol)) {
+      } else if (['MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol)) {
         setActiveTab('specialist');
       } else {
         setActiveTab('catalog');
@@ -51,7 +51,7 @@ const MainLayout: React.FC = () => {
       const allowed = ['sg-dashboard', 'specialist', 'tech-attended', 'sg-work-orders', 'sg-inventory', 'infrastructure-inspections', 'catalog', 'my-tickets', 'pending-surveys'];
       return allowed.includes(activeTab) ? activeTab : 'sg-dashboard';
     }
-    if (['MESA_AYUDA', 'TECNICO', 'TECNICO_SG'].includes(user.rol)) {
+    if (['MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol)) {
       const allowed = ['specialist', 'tech-attended', 'infrastructure-inspections', 'catalog', 'my-tickets', 'pending-surveys'];
       return allowed.includes(activeTab) ? activeTab : 'specialist';
     }

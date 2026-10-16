@@ -182,7 +182,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     const rol = user?.rol;
     if (rol === 'ADMIN') return 'Mi Perfil & Foto de Administrador OTIC';
     if (rol === 'SUPERVISOR') return 'Mi Perfil & Foto de Supervisor OTIC';
-    if (rol === 'TECNICO' || rol === 'MESA_AYUDA') return 'Mi Perfil & Foto de Especialista OTIC';
+    if (rol === 'TECNICO' || rol === 'ESPECIALISTA_REDES' || rol === 'ESPECIALISTA_DESARROLLO' || rol === 'MESA_AYUDA') return 'Mi Perfil & Foto de Especialista OTIC';
 
     const dep = `${user?.facultadDependencia || ''} ${profileData?.facultadDependencia || ''}`.toLowerCase();
     const rolNom = `${user?.rolNombre || ''} ${profileData?.rolNombre || ''}`.toLowerCase();
@@ -284,7 +284,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         </form>
 
         {/* Record & Star Stats (Habilitado solo para roles supervisores/admin/mesa de ayuda) */}
-        {user?.rol !== 'TECNICO' && (user?.rol === 'MESA_AYUDA' || user?.rol === 'SUPERVISOR' || user?.rol === 'ADMIN') && (
+        {!['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user?.rol || '') && (user?.rol === 'MESA_AYUDA' || user?.rol === 'SUPERVISOR' || user?.rol === 'ADMIN') && (
           <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 space-y-3">
             <span className="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider block">
               ⭐ Récord de Calidad & Satisfacción del Usuario

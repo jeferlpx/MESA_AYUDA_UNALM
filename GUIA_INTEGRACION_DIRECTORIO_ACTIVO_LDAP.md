@@ -262,4 +262,24 @@ No. Las cuentas locales de demostración, soporte o administración directa cont
 3. Reiniciar los contenedores: `docker compose up -d`.
 
 ---
+
+## 9. 🎨 Actualizaciones de Roles y Experiencia de Usuario (v2.5.1)
+
+### 9.1 Botón de Acceso Principal con Directorio Activo
+- **Jerarquía Visual Elevada:** Con la puesta en producción del enlace LDAP con el Domain Controller `172.16.0.8:636`, el botón de **Directorio Activo UNALM** se posicionó como el método primario y preferencial de ingreso institucional, con indicador activo en línea (`● EN LÍNEA`), gradiente azul zafiro/cian y micro-interacciones.
+- **Acceso Local Secundario:** El inicio de sesión con cuentas locales se mantiene disponible como alternativa secundaria mediante el botón **"Ingresar con Cuenta Local"**.
+
+### 9.2 Nuevos Roles Especializados y Renombramiento
+En la base de datos (`roles`) y en toda la plataforma se establecieron los siguientes roles técnicos:
+| ID | Código | Nombre Oficial | Descripción |
+|---|---|---|---|
+| **3** | `TECNICO` | **Especialista en Soporte Técnico** | Atención y resolución técnica de soporte a usuarios y equipos de cómputo (renombrado de Técnico Especialista OTIC) |
+| **9** | `ESPECIALISTA_REDES` | **Especialista en Redes** | Atención y resolución técnica en conectividad, cableado estructurado, fibra óptica y switches |
+| **10** | `ESPECIALISTA_DESARROLLO` | **Especialista en Desarrollo** | Atención y resolución técnica en sistemas de información, desarrollo de software, bases de datos y portales |
+
+### 9.3 Corrección Visual en el Registro ("Crear Cuenta")
+- Se corrigió el conflicto de contexto de apilamiento CSS (`z-index` y `drop-shadow`) que provocaba que el texto del pie de página institucional se superpusiera visualmente con las opciones desplegadas del selector de **Facultad o Dependencia UNALM**.
+- El panel flotante de dependencias ahora cuenta con fondo 100% opaco sólido (`bg-slate-950`), elevación `z-[150]` y altura máxima contenida para garantizar una visualización impecable.
+
+---
 *Documento elaborado y validado para la infraestructura tecnológica de la OTIC UNALM.*

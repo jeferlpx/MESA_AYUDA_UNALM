@@ -191,7 +191,7 @@ export class TicketModel {
     const params: any[] = [];
 
     // REGLA CLAVE DE AISLAMIENTO POR ROL Y MÓDULO (OTIC vs SERVICIOS GENERALES)
-    if (filters.userRole === 'TECNICO') {
+    if (['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO'].includes(filters.userRole)) {
       sql += ` AND (t.tecnico_id = ? OR EXISTS (SELECT 1 FROM ticket_tecnicos tt WHERE tt.ticket_id = t.id AND tt.tecnico_id = ?)) AND t.modulo = 'OTIC'`;
       params.push(filters.userId, filters.userId);
     } else if (filters.userRole === 'TECNICO_SG') {
@@ -235,7 +235,7 @@ export class TicketModel {
       params.push(filters.categoriaId);
     }
 
-    if (filters.tecnicoId && !['TECNICO', 'TECNICO_SG'].includes(filters.userRole)) {
+    if (filters.tecnicoId && !['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(filters.userRole)) {
       sql += ` AND (t.tecnico_id = ? OR EXISTS (SELECT 1 FROM ticket_tecnicos tt WHERE tt.ticket_id = t.id AND tt.tecnico_id = ?))`;
       params.push(filters.tecnicoId, filters.tecnicoId);
     }
@@ -746,11 +746,11 @@ export class TicketModel {
     const slaPercent = totalSla > 0 ? Math.round((cumplenSla / totalSla) * 100) : 100;
 
     // 4. Carga por técnico
-    let techRoles = `('TECNICO', 'TECNICO_SG', 'SUPERVISOR', 'SUPERVISOR_SG', 'ADMIN')`;
+    let techRoles = `('TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG', 'SUPERVISOR', 'SUPERVISOR_SG', 'ADMIN')`;
     if (modulo === 'SERVICIOS_GENERALES') {
       techRoles = `('TECNICO_SG', 'SUPERVISOR_SG')`;
     } else if (modulo === 'OTIC') {
-      techRoles = `('TECNICO', 'SUPERVISOR')`;
+      techRoles = `('TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'SUPERVISOR')`;
     }
 
     const [techRows] = await dbPool.query<RowDataPacket[]>(`

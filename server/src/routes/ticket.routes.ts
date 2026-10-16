@@ -22,10 +22,10 @@ const handleFlexibleUpload = (req: Request, res: Response, next: NextFunction) =
 router.get('/', TicketController.listTickets);
 router.get('/:id', TicketController.getTicketDetail);
 router.post('/', handleFlexibleUpload, TicketController.createTicket);
-router.put('/:id/status', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'TECNICO', 'TECNICO_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'SOLICITANTE'), handleFlexibleUpload, TicketController.changeStatus);
+router.put('/:id/status', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'SOLICITANTE'), handleFlexibleUpload, TicketController.changeStatus);
 router.put('/:id/assign', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG'), TicketController.assignTicket);
 router.put('/:id/observe', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG'), handleFlexibleUpload, TicketController.observeTicket);
-router.put('/:id/derive', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'TECNICO', 'TECNICO_SG'), TicketController.deriveTicket);
+router.put('/:id/derive', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'), TicketController.deriveTicket);
 router.put('/:id/reopen', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'SOLICITANTE'), TicketController.reopenTicket);
 router.post('/:id/survey', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'SOLICITANTE'), TicketController.submitSurvey);
 router.post('/:id/comments', handleFlexibleUpload, TicketController.addComment);

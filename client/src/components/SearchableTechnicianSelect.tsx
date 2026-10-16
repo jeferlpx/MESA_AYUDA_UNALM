@@ -57,8 +57,10 @@ export const SearchableTechnicianSelect: React.FC<SearchableTechnicianSelectProp
     if (text.includes('riego')) return { label: 'Riego', bg: 'bg-cyan-100 text-cyan-800 border-cyan-300' };
     if (text.includes('residuo') || text.includes('maleza') || text.includes('limpieza')) return { label: 'Saneamiento', bg: 'bg-teal-100 text-teal-800 border-teal-300' };
     if (text.includes('mecanica')) return { label: 'Mecánica', bg: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
-    if (text.includes('transporte') || text.includes('chofer')) return { label: 'Transporte', bg: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
-    if (rol === 'TECNICO' || rol === 'SUPERVISOR' || text.includes('otic')) return { label: 'OTIC / TI', bg: 'bg-sky-100 text-sky-800 border-sky-300' };
+    if (rol === 'ESPECIALISTA_REDES') return { label: 'Redes y Conectividad', bg: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    if (rol === 'ESPECIALISTA_DESARROLLO') return { label: 'Desarrollo de Software', bg: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
+    if (rol === 'TECNICO') return { label: 'Soporte Técnico OTIC', bg: 'bg-sky-100 text-sky-800 border-sky-300' };
+    if (rol === 'SUPERVISOR' || text.includes('otic')) return { label: 'OTIC / TI', bg: 'bg-sky-100 text-sky-800 border-sky-300' };
     return { label: 'Servicios Generales', bg: 'bg-slate-100 text-slate-700 border-slate-200' };
   };
 

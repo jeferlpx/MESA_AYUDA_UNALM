@@ -29,7 +29,7 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
   onSelectTicketDetail,
 }) => {
   const { user } = useAuth();
-  const isTechRole = user?.rol === 'TECNICO' || user?.rol === 'TECNICO_SG';
+  const isTechRole = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol));
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,16 +50,16 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
   const loadAttendedTickets = async () => {
     try {
       setLoading(true);
-      const isTechRole = user?.rol === 'TECNICO' || user?.rol === 'TECNICO_SG';
+      const isTechRole = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol));
       const res = await api.getTickets({
         estado: 'RESUELTO',
-        ...(isTechRole ? { tecnicoId: user.id.toString() } : {}),
+        ...(isTechRole && user?.id ? { tecnicoId: user.id.toString() } : {}),
       });
 
       if (res.success) {
         // Para técnicos, filtrar estrictamente los que atendió él
         let list: Ticket[] = res.data || [];
-        if (isTechRole) {
+        if (isTechRole && user?.id) {
           list = list.filter((t) => t.tecnico_id === user.id);
         }
         setTickets(list);

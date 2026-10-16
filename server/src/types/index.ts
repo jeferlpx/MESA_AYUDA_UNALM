@@ -5,6 +5,8 @@ export type RoleCode =
   | 'SUPERVISOR'
   | 'SUPERVISOR_SG'
   | 'TECNICO'
+  | 'ESPECIALISTA_REDES'
+  | 'ESPECIALISTA_DESARROLLO'
   | 'TECNICO_SG'
   | 'MESA_AYUDA'
   | 'MESA_AYUDA_SG'

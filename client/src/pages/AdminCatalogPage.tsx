@@ -617,7 +617,7 @@ export const AdminCatalogPage: React.FC = () => {
                     if (modulo === 'SERVICIOS_GENERALES') {
                       return t.rol === 'TECNICO_SG' || t.rol === 'SUPERVISOR_SG';
                     }
-                    return t.rol === 'TECNICO' || t.rol === 'SUPERVISOR';
+                    return ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'SUPERVISOR'].includes(t.rol);
                   })
                   .map((t) => (
                     <option key={t.id} value={t.id.toString()}>

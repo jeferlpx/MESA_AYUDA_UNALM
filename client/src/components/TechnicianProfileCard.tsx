@@ -41,7 +41,7 @@ export const TechnicianProfileCard: React.FC<TechnicianProfileCardProps> = ({
   onClick,
 }) => {
   const { user } = useAuth();
-  const isTechnician = user?.rol === 'TECNICO' || user?.rol === 'TECNICO_SG';
+  const isTechnician = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol));
   const isSG = modulo === 'SERVICIOS_GENERALES';
   const rating = Number(promedioEstrellas || 5.0).toFixed(1);
   const numRating = parseFloat(rating);

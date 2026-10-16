@@ -319,7 +319,7 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
   const isAssignedTech = Boolean(
     user && (ticket.tecnico_id === user.id || (ticket.tecnicos_adicionales && ticket.tecnicos_adicionales.some((a) => a.id === user.id)))
   );
-  const canResolve = (user?.rol === 'TECNICO' || user?.rol === 'TECNICO_SG') && isAssignedTech && ticket.estado !== 'RESUELTO';
+  const canResolve = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol)) && isAssignedTech && ticket.estado !== 'RESUELTO';
   const isObservado = Boolean(
     ticket && (ticket.estado === 'OBSERVADO' || comments.some((c) => c.mensaje.includes('[OBSERVACIÓN') || c.mensaje.includes('[OBSERVACION')))
   );
