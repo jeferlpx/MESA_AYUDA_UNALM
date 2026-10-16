@@ -494,21 +494,6 @@ Datos solicitados al Administrador de Redes OTIC:
                     </div>
                   </div>
                 </button>
-
-                <div className="flex items-center justify-between px-1 text-[11px]">
-                  <span className="text-slate-400 flex items-center space-x-1.5">
-                    <Server className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Dominio: <strong className="text-slate-200">lamolina.edu.pe</strong></span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleOpenLdapModal}
-                    className="text-sky-400 hover:text-sky-300 font-semibold underline flex items-center space-x-1 cursor-pointer transition-colors"
-                  >
-                    <Info className="w-3 h-3" />
-                    <span>Parámetros de Red</span>
-                  </button>
-                </div>
               </div>
 
               {/* Separador Institucional */}
