@@ -51,3 +51,8 @@ client/ssl/
 certificado https/
 *.key
 *.pem
+
+# Documentación (excluir archivos .md excepto README.md raíz)
+*.md
+!/README.md
+

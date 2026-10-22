@@ -1,94 +1,88 @@
-# 🏛️ SISTEMA DE MESA DE AYUDA IN-HOUSE (OTIC UNALM) - ITIL v4 READY (v2.5.1)
+# 🏛️ Sistema de Mesa de Ayuda OTIC UNALM
 
-Sistema enterprise de gestión de tickets, incidentes y solicitudes de servicio para la **Oficina de Tecnologías de la Información y Comunicaciones (OTIC)** de la **Universidad Nacional Agraria La Molina (UNALM)**.
-
-### ✨ Capacidades Principales
-- **Autenticación con Directorio Activo (LDAP / Active Directory UNALM - v2.5.1):** Inicio de sesión corporativo integrado con el Domain Controller de la UNALM (`lamolina.edu.pe`), canal seguro LDAPS (puerto 636), botón institucional destacado en el login y auto-aprovisionamiento de perfiles. Ver [GUIA_INTEGRACION_DIRECTORIO_ACTIVO_LDAP.md](file:///var/www/mesa-ayuda/GUIA_INTEGRACION_DIRECTORIO_ACTIVO_LDAP.md).
-- **Especialidades Técnicas OTIC Diferenciadas:** Roles específicos para **Especialista en Soporte Técnico**, **Especialista en Redes** y **Especialista en Desarrollo**, además de especialistas en Infraestructura y Mantenimiento de Servicios Generales.
-- **Arquitectura Multimódulo:** Atención especializada independiente para **OTIC** e infraestructura de **Servicios Generales**.
-- **Asignación Multitécnico Colaborativo (Exclusivo OTIC):** Conformación de equipos de intervención (1 Técnico Principal + N Técnicos de Apoyo) cuando la complejidad técnica es crítica o altamente especializada (`COMPLEJA`).
-- **Resolución con Informe Técnico Digital (Opcional):** Los técnicos pueden adjuntar documentación formal (.pdf, .docx, imágenes) al momento de registrar la solución.
-- **Medición de SLAs Automatizada:** Tiempos de primera respuesta y resolución computados en tiempo real con ponderación por complejidad técnica.
-- **Encuestas de Calidad y Calificación:** Evaluación de satisfacción obligatoria de 1 a 5 estrellas para el cierre formal del ticket.
+Sistema web para la gestión de tickets, incidencias y requerimientos de soporte técnico para la **Oficina de Tecnologías de la Información y Comunicaciones (OTIC)** de la **Universidad Nacional Agraria La Molina (UNALM)**.
 
 ---
 
-## 📌 Requisitos de Entorno y Variables de Configuración
+## 🛠️ Stack Tecnológico
 
-- **Base de Datos:** MySQL 8.0 (`mesaayuda_db`)
-- **Backend API:** Node.js 20 LTS + Express + TypeScript (Puerto 4000)
-- **Frontend Portal:** React 18 + Vite (Puerto 80 / Nginx)
-- **Almacenamiento de Adjuntos:** Directorio `/app/uploads` (Docker) o `uploads/`
-- **Configuración:** Las credenciales de base de datos y llaves de seguridad se configuran exclusivamente mediante variables de entorno en el archivo `.env` (ver `.env.example`). Nunca exponga credenciales en el repositorio.
+- **Backend:** Node.js 20 LTS, Express, TypeScript
+- **Frontend:** React 18, Vite, Tailwind CSS, Lucide Icons
+- **Base de Datos:** MySQL 8.0 (motor relacional InnoDB)
+- **Autenticación:** JSON Web Tokens (JWT) / Integración opcional LDAP Active Directory
+- **Almacenamiento de Adjuntos:** Sistema de archivos (`uploads/` con Multer)
 
 ---
 
-## 🚀 Estructura del Proyecto
+## 📁 Estructura del Proyecto
 
 ```
-y:/pruebas1/David/MESA_AYUDA/
-├── schema.sql                 # DDL de MySQL + Seeders de Usuarios/Servicios UNALM
+mesa-ayuda/
+├── schema.sql                 # DDL de Base de Datos y Seeders iniciales
 ├── config/
-│   ├── .env.example           # Variables de entorno
-│   └── nginx.conf             # Reverse Proxy & Servidor de Adjuntos Nginx
-├── server/                    # API REST Backend (Node.js/TypeScript)
+│   ├── .env.example           # Plantilla de variables de entorno
+│   └── nginx.conf             # Configuración de proxy inverso Nginx
+├── server/                    # API Backend (Node.js + Express + TypeScript)
 │   ├── src/
-│   │   ├── config/            # DB Connection & Env
-│   │   ├── controllers/       # Auth, Tickets, Users, Catalog
-│   │   ├── middlewares/       # JWT Auth, RBAC, Multer, ErrorHandler
-│   │   ├── models/            # Queries MySQL para ITIL
-│   │   ├── routes/            # Endpoints Express
-│   │   └── utils/             # Generador Correlativo OTIC-2026-XXXXX & SLA
-│   └── package.json
-└── client/                    # Frontend UI (React + Tailwind + Lucide)
+│   │   ├── config/            # Conexión a Base de Datos y Entorno
+│   │   ├── controllers/       # Controladores (Auth, Tickets, Usuarios, Catálogo)
+│   │   ├── middlewares/       # JWT, RBAC, Multer, Manejador de Errores
+│   │   ├── models/            # Consultas y modelos de datos
+│   │   ├── routes/            # Definición de rutas API
+│   │   ├── services/          # Servicios auxiliares (LDAP, Notificaciones)
+│   │   └── utils/             # Funciones de utilidad (SLA, correlativos)
+│   ├── package.json
+│   └── tsconfig.json
+└── client/                    # Frontend SPA (React + TypeScript + Vite)
     ├── src/
-    │   ├── components/        # UI System: Navbar, Sidebar, Badges, Drawer, Modal, FileUploader
-    │   ├── pages/             # Login, SolicitantPortal, SpecialistDashboard, AdminCatalog, TicketDetail
-    │   └── services/          # API Fetch Client
-    └── package.json
+    │   ├── components/        # Componentes UI reutilizables
+    │   ├── pages/             # Vistas principales del sistema
+    │   └── services/          # Cliente HTTP API
+    ├── package.json
+    └── vite.config.ts
 ```
 
 ---
 
-## ⚡ Pasos para el Despliegue en el Servidor Linux UNALM
+## ⚙️ Configuración y Ejecución
 
-### 1. Cargar la Base de Datos en MySQL
+### 1. Variables de Entorno
+Cree el archivo `.env` en `server/` basándose en la plantilla proporcionada:
 ```bash
-mysql -h <HOST_BD> -u <USUARIO_BD> -p mesaayuda_db < schema.sql
+cp config/.env.example server/.env
+```
+Configure los parámetros de conexión a MySQL, puertos, secretos JWT y parámetros SMTP/LDAP según corresponda.
+
+### 2. Base de Datos
+Importe el esquema y datos iniciales en una instancia MySQL 8.0:
+```bash
+mysql -u <usuario> -p <base_de_datos> < schema.sql
 ```
 
-### 2. Iniciar Backend Node.js
+### 3. Backend (API)
 ```bash
-cd /var/www/mesa-ayuda/server
-cp ../config/.env.example .env
+cd server
 npm install
 npm run build
 npm start
 ```
+*Para desarrollo con hot-reload:* `npm run dev`
 
-### 3. Compilar el Frontend React
+### 4. Frontend (Cliente)
 ```bash
-cd /var/www/mesa-ayuda/client
+cd client
 npm install
 npm run build
 ```
-
-### 4. Configurar Nginx
-Copiar `config/nginx.conf` a `/etc/nginx/conf.d/mesaayuda.conf` y reiniciar Nginx:
-```bash
-sudo cp config/nginx.conf /etc/nginx/conf.d/mesaayuda.conf
-sudo nginx -t
-sudo systemctl reload nginx
-```
+*Para servidor local de desarrollo:* `npm run dev`
 
 ---
 
-## 👥 Usuarios Demo Pre-Cargados (Seeders)
+## 👥 Cuentas de Prueba Pre-Cargadas (Seeders)
 
-Todos los usuarios tienen la contraseña de prueba: `Unalm2026$`
+Contraseña por defecto: `Unalm2026$`
 
-1. **Administrador General OTIC:** `admin.otic@lamolina.edu.pe`
-2. **Supervisor OTIC:** `supervisor.otic@lamolina.edu.pe`
-3. **Técnico de Redes:** `tecnico.redes@lamolina.edu.pe`
-4. **Estudiante Solicitante:** `20220145@lamolina.edu.pe`
-5. **Docente Solicitante:** `jbenavides@lamolina.edu.pe`
+- **Administrador:** `admin.otic@lamolina.edu.pe`
+- **Supervisor:** `supervisor.otic@lamolina.edu.pe`
+- **Técnico Redes:** `tecnico.redes@lamolina.edu.pe`
+- **Solicitante:** `20220145@lamolina.edu.pe`
