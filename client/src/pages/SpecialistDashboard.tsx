@@ -8,6 +8,7 @@ import { ServiceRequestModal } from '../components/ServiceRequestModal';
 import { WorkOrderModal } from '../components/WorkOrderModal';
 import { SGFieldTimelineTracker } from '../components/SGFieldTimelineTracker';
 import { SearchableTechnicianSelect } from '../components/SearchableTechnicianSelect';
+import { WhatsAppButton } from '../components/WhatsAppButton';
 import { useAuth } from '../context/AuthContext';
 import { TableSkeleton } from '../components/Skeleton';
 
@@ -17,6 +18,8 @@ import {
   Filter,
   Search,
   UserCheck,
+  User,
+  Phone,
   Clock,
   Send,
   AlertTriangle,
@@ -998,7 +1001,80 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
           title={`Gestión de Ticket: ${selectedTicket.codigo_correlativo}`}
           subtitle={`${selectedTicket.modulo === 'SERVICIOS_GENERALES' ? '🏗️ Servicios Generales' : '💻 OTIC'} — ${selectedTicket.titulo}`}
         >
-          <div className="space-y-6">
+          <div className="space-y-4">
+            {/* Tarjeta de Contacto Rápido del Solicitante & WhatsApp */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center space-x-1.5">
+                  <User className="w-3.5 h-3.5 text-unalm-600" />
+                  <span>Contacto del Solicitante</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDrawerOpen(false);
+                    onSelectTicketDetail(selectedTicket.id);
+                  }}
+                  className="text-[11px] font-bold text-unalm-700 hover:text-unalm-900 flex items-center space-x-1 cursor-pointer bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs hover:bg-slate-50 transition-colors"
+                >
+                  <Eye className="w-3 h-3 text-unalm-600" />
+                  <span>Ver Detalle Completo</span>
+                </button>
+              </div>
+
+              <div className="text-xs space-y-1.5 pt-1 border-t border-slate-200/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Solicitante:</span>
+                  <span className="font-bold text-slate-900">{selectedTicket.solicitante_nombre}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Dependencia:</span>
+                  <span className="font-semibold text-slate-800 text-[11px] truncate max-w-[200px]">
+                    {selectedTicket.ubicacion_oficina || selectedTicket.solicitante_dependencia || 'Campus Universitario UNALM'}
+                  </span>
+                </div>
+
+                {selectedTicket.solicitante_telefono && (
+                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                    <span className="text-slate-500 font-medium">Celular Solicitante:</span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-bold text-slate-900">{selectedTicket.solicitante_telefono}</span>
+                      <WhatsAppButton
+                        phone={selectedTicket.solicitante_telefono}
+                        label="WhatsApp"
+                        defaultMessage={`Hola ${selectedTicket.solicitante_nombre}, le escribimos de la Mesa de Ayuda UNALM respecto a su ticket ${selectedTicket.codigo_correlativo}: "${selectedTicket.titulo}".`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {selectedTicket.contacto_local && (
+                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                    <span className="text-slate-500 font-medium">Ref. Contacto:</span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-bold text-slate-900">{selectedTicket.contacto_local}</span>
+                      <WhatsAppButton
+                        phone={selectedTicket.contacto_local}
+                        label="WhatsApp"
+                        defaultMessage={`Hola, le escribimos de la Mesa de Ayuda UNALM respecto al requerimiento ${selectedTicket.codigo_correlativo}: "${selectedTicket.titulo}".`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {selectedTicket.horario_acceso && (
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="text-slate-500 font-medium">Horario Atención:</span>
+                    <span className="font-bold text-amber-900 flex items-center space-x-1 text-[11px]">
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      <span>{selectedTicket.horario_acceso}</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Action Selector Tabs (Ocultar pestañas no permitidas) */}
             {!isTechnicianOnly && (
               <div className="flex items-center space-x-1.5 border-b border-slate-200 pb-2">

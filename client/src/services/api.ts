@@ -165,6 +165,8 @@ export const api = {
     apiFetch(`/users/${id}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
   deleteUser: (id: number) => 
     apiFetch(`/users/${id}`, { method: 'DELETE' }),
+  syncLdapUsers: () =>
+    apiFetch('/users/sync-ldap', { method: 'POST' }),
 
 
   // Tickets

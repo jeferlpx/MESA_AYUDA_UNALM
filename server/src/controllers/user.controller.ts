@@ -403,6 +403,25 @@ export class UserController {
       return res.status(500).json({ success: false, message: 'Error al consultar historial del especialista' });
     }
   }
+
+  static async syncLdapUsers(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execPromise = util.promisify(exec);
+      const scriptPath = require('path').join(__dirname, '../../scripts/sync-ldap-users.js');
+
+      const { stdout } = await execPromise(`node "${scriptPath}"`);
+      return res.json({
+        success: true,
+        message: 'Sincronización con Directorio Activo completada con éxito',
+        data: { output: stdout },
+      });
+    } catch (error: any) {
+      console.error('[syncLdapUsers error]:', error);
+      return res.status(500).json({ success: false, message: error.message || 'Error al sincronizar con Directorio Activo' });
+    }
+  }
 }
 
 

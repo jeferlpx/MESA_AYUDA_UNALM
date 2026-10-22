@@ -1,25 +1,40 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { UserProfileModal } from './UserProfileModal';
-import { LogOut, User as UserIcon, HelpCircle, Layers, Bell } from 'lucide-react';
+import { LogOut, Sun, Moon, Menu } from 'lucide-react';
 import { getAssetUrl } from '../services/api';
 
 interface NavbarProps {
-  onToggleSidebar?: () => void;
+  onToggleMobileMenu?: () => void;
+  isMobileMenuOpen?: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = () => {
+export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   return (
     <>
-      <header className="sticky top-0 z-30 w-full bg-unalm-600 text-white shadow-md border-b border-unalm-700 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-30 w-full bg-unalm-600 dark:bg-slate-900 text-white shadow-md border-b border-unalm-700 dark:border-slate-800 print:hidden transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Brand Logo & Institution Info */}
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-lg bg-white p-1 flex items-center justify-center shadow-md border border-white/20">
+            {/* Mobile Menu Hamburger Button & Brand Logo */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {user && (
+                <button
+                  type="button"
+                  onClick={onToggleMobileMenu}
+                  className="p-2 rounded-xl bg-unalm-700/80 dark:bg-slate-800 hover:bg-unalm-800 dark:hover:bg-slate-700 text-white transition-colors md:hidden focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                  title="Abrir menú de módulos"
+                  aria-label="Abrir menú de navegación"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+              )}
+
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white p-1 flex items-center justify-center shadow-md border border-white/20 shrink-0">
                 <img
                   src="./escudo-color.png"
                   alt="Escudo UNALM"
@@ -27,10 +42,10 @@ export const Navbar: React.FC<NavbarProps> = () => {
                 />
               </div>
               <div>
-                <span className="font-bold text-lg tracking-wide text-white block leading-tight">
-                  MESA DE AYUDA <span className="text-unalm-300 font-normal">OTIC</span>
+                <span className="font-bold text-base sm:text-lg tracking-wide text-white block leading-tight">
+                  MESA DE AYUDA <span className="text-unalm-300 dark:text-emerald-400 font-normal">OTIC</span>
                 </span>
-                <span className="text-xs text-unalm-200 block font-light">
+                <span className="text-[10px] sm:text-xs text-unalm-200 dark:text-slate-400 block font-light truncate max-w-[170px] sm:max-w-none">
                   Universidad Nacional Agraria La Molina
                 </span>
               </div>
@@ -38,17 +53,32 @@ export const Navbar: React.FC<NavbarProps> = () => {
 
             {/* User Status & Controls */}
             {user && (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                {/* Botón de Modo Oscuro / Modo Claro */}
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  title={isDark ? 'Cambiar a Modo Claro (Día)' : 'Cambiar a Modo Oscuro (Noche)'}
+                  aria-label="Alternar tema visual"
+                  className="p-2 rounded-xl bg-unalm-700 dark:bg-slate-800 hover:bg-unalm-800 dark:hover:bg-slate-700 text-amber-200 dark:text-amber-300 transition-all duration-200 border border-white/10 dark:border-slate-700 shadow-xs active:scale-95 flex items-center justify-center cursor-pointer"
+                >
+                  {isDark ? (
+                    <Sun className="w-4 h-4 text-amber-300 transition-transform hover:rotate-45" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-amber-200 transition-transform hover:-rotate-12" />
+                  )}
+                </button>
+
                 <button
                   onClick={() => setIsProfileModalOpen(true)}
-                  className="flex items-center space-x-3 p-1.5 rounded-2xl hover:bg-unalm-700/80 transition-colors text-left group"
+                  className="flex items-center space-x-2 sm:space-x-3 p-1 sm:p-1.5 rounded-2xl hover:bg-unalm-700/80 dark:hover:bg-slate-800 transition-colors text-left group"
                   title="Ver y editar mi perfil / foto"
                 >
                   <div className="hidden md:flex flex-col text-right">
                     <span className="text-sm font-bold text-white group-hover:text-amber-200 transition-colors">
                       {user.nombres} {user.apellidos}
                     </span>
-                    <span className="text-[11px] text-unalm-200">
+                    <span className="text-[11px] text-unalm-200 dark:text-slate-400 truncate max-w-[220px]">
                       {user.facultadDependencia} •{' '}
                       <span className="uppercase font-extrabold text-amber-300">
                         {user.rol === 'MESA_AYUDA' ? 'MESA DE AYUDA' : user.rol}
@@ -56,26 +86,26 @@ export const Navbar: React.FC<NavbarProps> = () => {
                     </span>
                   </div>
 
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     {user.fotoPerfil ? (
                       <img
                         src={getAssetUrl(user.fotoPerfil)}
                         alt={user.nombres}
-                        className="w-9 h-9 rounded-full object-cover border-2 border-amber-300 shadow"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-amber-300 shadow"
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-unalm-800 border-2 border-unalm-400 flex items-center justify-center text-white font-bold text-xs shadow">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-unalm-800 dark:bg-slate-800 border-2 border-unalm-400 dark:border-emerald-500 flex items-center justify-center text-white font-bold text-xs shadow">
                         {user.nombres?.slice(0, 2).toUpperCase() || 'US'}
                       </div>
                     )}
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-unalm-600" />
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-unalm-600 dark:border-slate-900" />
                   </div>
                 </button>
 
                 <button
                   onClick={logout}
                   title="Cerrar Sesión"
-                  className="p-2 rounded-xl bg-unalm-700 hover:bg-red-700 text-white transition-colors duration-150 border border-white/10 flex items-center space-x-1 text-xs font-medium shadow-xs"
+                  className="p-2 rounded-xl bg-unalm-700 dark:bg-slate-800 hover:bg-red-700 dark:hover:bg-red-700 text-white transition-colors duration-150 border border-white/10 dark:border-slate-700 flex items-center space-x-1 text-xs font-medium shadow-xs cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Salir</span>

@@ -21,6 +21,7 @@ router.get('/technicians/:id/history', UserController.getTechnicianHistory);
 router.get('/', authorizeRoles('ADMIN', 'SUPERVISOR'), UserController.getAllUsers);
 router.get('/:id', authorizeRoles('ADMIN', 'SUPERVISOR'), UserController.getUserById);
 router.post('/register', authorizeRoles('ADMIN'), UserController.createUser);
+router.post('/sync-ldap', authorizeRoles('ADMIN', 'SUPERVISOR'), UserController.syncLdapUsers);
 router.put('/:id', authorizeRoles('ADMIN'), UserController.updateUser);
 router.post('/:id/photo', authorizeRoles('ADMIN'), uploadMiddleware.single('file'), UserController.updateUserPhotoByAdmin);
 router.put('/:id/password', authorizeRoles('ADMIN'), UserController.updatePassword);

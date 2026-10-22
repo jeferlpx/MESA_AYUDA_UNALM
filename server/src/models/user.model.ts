@@ -6,8 +6,9 @@ export class UserModel {
   static async findByEmail(email: string): Promise<UserDB | null> {
     const cleanEmail = email.toLowerCase().trim();
     const candidateEmails = [cleanEmail];
-    if (cleanEmail === 'admin@lamolina.edu.pe') candidateEmails.push('admin.otic@lamolina.edu.pe');
-    if (cleanEmail === 'admin.otic@lamolina.edu.pe') candidateEmails.push('admin@lamolina.edu.pe');
+    if (cleanEmail === 'admin' || cleanEmail === 'admin@lamolina.edu.pe' || cleanEmail === 'admin.otic@lamolina.edu.pe') {
+      candidateEmails.push('admin', 'admin@lamolina.edu.pe', 'admin.otic@lamolina.edu.pe');
+    }
     if (cleanEmail === 'supervisor@lamolina.edu.pe') candidateEmails.push('supervisor.otic@lamolina.edu.pe');
     if (cleanEmail === 'supervisor.otic@lamolina.edu.pe') candidateEmails.push('supervisor@lamolina.edu.pe');
     if (cleanEmail === 'soporte@lamolina.edu.pe') candidateEmails.push('mesa.ayuda@lamolina.edu.pe', 'mesa@lamolina.edu.pe');

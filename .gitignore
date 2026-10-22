@@ -52,6 +52,12 @@ certificado https/
 *.key
 *.pem
 
+# Guía confidencial de credenciales y claves de infraestructura (CRÍTICO: No subir a GitHub)
+CREDENCIALES_*.md
+*CREDENCIALES*.md
+claves_*.md
+*PASSWORDS*.md
+
 # Documentación (excluir archivos .md excepto README.md raíz)
 *.md
 !/README.md

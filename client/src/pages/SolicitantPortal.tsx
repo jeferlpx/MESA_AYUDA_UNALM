@@ -338,12 +338,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
     setTitulo('');
     setDescripcion('');
     setReferenciaUbicacion('');
-    const defaultContact = user?.telefono
-      ? user?.anexo
-        ? `${user.telefono} / Anexo ${user.anexo}`
-        : user.telefono
-      : '';
-    setContactoLocal(customContact || defaultContact);
+    setContactoLocal(''); // Contacto de referencia extra siempre inicia en blanco como se requiere
     setHorarioAcceso('');
     setSubtipoIntervencion('MANTENIMIENTO_CORRECTIVO');
     setDatosVehiculares('');
@@ -413,7 +408,17 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCategory || !titulo.trim() || !descripcion.trim()) {
-      setFormError('Por favor complete los campos obligatorios (*)');
+      setFormError('Por favor complete los campos obligatorios marcados con (*)');
+      return;
+    }
+
+    if (!contactoLocal.trim()) {
+      setFormError('Por favor ingrese el contacto de referencia (N° de celular) para la atención');
+      return;
+    }
+
+    if (!horarioAcceso.trim()) {
+      setFormError('Por favor ingrese el horario en que el personal técnico puede acercarse a atender el caso');
       return;
     }
 
@@ -1228,42 +1233,82 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               </div>
             </div>
 
-            {/* Campos Especializados para Servicios Generales */}
-            {selectedCategory.modulo === 'SERVICIOS_GENERALES' && (
-              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-3">
-                <span className="text-xs font-extrabold text-amber-900 uppercase tracking-wider block">
-                  🏗️ Datos de Campo & Logística de Mantenimiento
+            {/* Contacto de Referencia y Horario Preferente para Atención Técnica (Obligatorios) */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                  <Phone className="w-3.5 h-3.5 text-unalm-600" />
+                  <span>Contacto de Referencia & Horario para Atención Técnica *</span>
                 </span>
+                <span className="text-[10px] text-amber-800 bg-amber-100 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-md font-bold">
+                  Obligatorio
+                </span>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Celular de Contacto en Ambiente
-                    </label>
-                    <input
-                      type="text"
-                      value={contactoLocal}
-                      onChange={(e) => setContactoLocal(e.target.value)}
-                      placeholder={user?.telefono ? (user?.anexo ? `${user.telefono} / Anexo ${user.anexo}` : user.telefono) : 'Ej: 998877665 / Anexo 234'}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white"
-                    />
+              {/* Número de celular del solicitante registrado en su perfil institucional */}
+              <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-600/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                    <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Horario de Acceso al Ambiente
-                    </label>
-                    <input
-                      type="text"
-                      value={horarioAcceso}
-                      onChange={(e) => setHorarioAcceso(e.target.value)}
-                      placeholder="Ej: Lun-Vie 8:00 AM - 1:00 PM"
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white"
-                    />
+                    <span className="text-slate-600 dark:text-slate-300 font-medium mr-1.5">N° de Celular Registrado en su Perfil:</span>
+                    <span className="font-extrabold text-slate-900 dark:text-white">
+                      {user?.telefono || 'No registrado en perfil'}
+                    </span>
+                    {user?.anexo && (
+                      <span className="text-slate-500 dark:text-slate-400 font-normal ml-1">
+                        (Anexo {user.anexo})
+                      </span>
+                    )}
                   </div>
                 </div>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold bg-white/80 dark:bg-slate-800 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-700 self-start sm:self-auto">
+                  Registrado en Perfil
+                </span>
               </div>
-            )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Contacto de Referencia (N° de Celular) *
+                    </label>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.2 rounded border border-amber-200 dark:border-amber-800">
+                      Contacto Extra
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={contactoLocal}
+                    onChange={(e) => setContactoLocal(e.target.value)}
+                    placeholder="Ej: 998 877 665 / Celular adicional"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 dark:text-white shadow-2xs"
+                  />
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">
+                    N° telefónico extra o alternativo de referencia para coordinar la visita técnica.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Horario para que el Técnico se Acerque *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={horarioAcceso}
+                    onChange={(e) => setHorarioAcceso(e.target.value)}
+                    placeholder="Ej: Lun-Vie 8:00 AM - 1:00 PM o Hoy desde 2:00 PM"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 shadow-2xs"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Horario de disponibilidad en su oficina o ambiente para atender el caso.
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* Descripción Detallada */}
             <div>

@@ -123,6 +123,57 @@ export class AuthController {
         });
       }
 
+      // 1. Verificar si es una cuenta local de administración o contingencia (ej: admin / admin2026@)
+      const localCandidate = await UserModel.findByEmail(username);
+      if (localCandidate && localCandidate.password_hash) {
+        const isLocalPasswordValid = await bcrypt.compare(password, localCandidate.password_hash);
+        if (isLocalPasswordValid) {
+          if (localCandidate.estado === 'BLOQUEADO') {
+            return res.status(403).json({
+              success: false,
+              message: 'Su cuenta se encuentra bloqueada en la Mesa de Ayuda.',
+            });
+          }
+          await UserModel.updateLastLogin(localCandidate.id);
+          const payload: UserTokenPayload = {
+            id: localCandidate.id,
+            email: localCandidate.email,
+            nombres: localCandidate.nombres,
+            apellidos: localCandidate.apellidos,
+            rol: localCandidate.rol_codigo,
+            rol_id: localCandidate.rol_id,
+            facultad_dependencia: localCandidate.facultad_dependencia,
+            cargo: localCandidate.cargo,
+          };
+          const token = jwt.sign(payload, env.JWT_SECRET, {
+            expiresIn: (env.JWT_EXPIRES_IN || '8h') as any,
+          });
+          return res.json({
+            success: true,
+            message: 'Autenticación exitosa',
+            data: {
+              token,
+              authType: 'LOCAL_ADMIN',
+              user: {
+                id: localCandidate.id,
+                nombres: localCandidate.nombres,
+                apellidos: localCandidate.apellidos,
+                email: localCandidate.email,
+                rol: localCandidate.rol_codigo,
+                rolNombre: localCandidate.rol_nombre,
+                facultadDependencia: localCandidate.facultad_dependencia,
+                cargo: localCandidate.cargo,
+                telefono: localCandidate.telefono,
+                anexo: localCandidate.anexo,
+                fotoPerfil: localCandidate.foto_perfil,
+                debeCambiarPassword: false,
+                correoPendiente: false,
+              },
+            },
+          });
+        }
+      }
+
       const authResult = await LdapService.authenticate(username, password);
 
       if (!authResult.success || !authResult.user) {
