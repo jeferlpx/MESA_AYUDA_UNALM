@@ -589,7 +589,7 @@ export const SGDashboardPage: React.FC<SGDashboardPageProps> = ({
           </div>
 
           {/* Pestañas de Talleres */}
-          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-thin">
+          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 no-scrollbar">
             {TALLERES_LIST.map((t) => {
               const Icon = t.icon;
               const isSelected = selectedTaller === t.id;

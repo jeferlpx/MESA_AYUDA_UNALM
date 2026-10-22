@@ -328,7 +328,8 @@ export const AdminDashboardPage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Vista en Tabla para Desktop */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
@@ -361,7 +362,6 @@ export const AdminDashboardPage: React.FC = () => {
                           <span className="group-hover:text-unalm-700 transition-colors">{tec.tecnicoNombre}</span>
                         </td>
                         <td className="py-3 px-3 text-center">
-
                           <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
                             {tec.asignados}
                           </span>
@@ -388,6 +388,57 @@ export const AdminDashboardPage: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Vista en Tarjetas para Móviles (sin scroll horizontal) */}
+              <div className="block sm:hidden space-y-2.5">
+                {metrics?.cargaPorTecnico.map((tec) => (
+                  <div
+                    key={tec.tecnicoId}
+                    className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 cursor-pointer hover:border-slate-300 transition-all"
+                    onClick={() => setSelectedTechIdForHistory(tec.tecnicoId)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        {tec.fotoPerfil ? (
+                          <img
+                            src={getAssetUrl(tec.fotoPerfil)}
+                            alt={tec.tecnicoNombre}
+                            className="w-8 h-8 rounded-full object-cover border border-amber-300 shadow-2xs"
+                          />
+                        ) : (
+                          <span className="w-8 h-8 rounded-full bg-unalm-100 text-unalm-700 font-extrabold flex items-center justify-center text-xs">
+                            {tec.tecnicoNombre.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="font-bold text-slate-900 text-xs">{tec.tecnicoNombre}</span>
+                      </div>
+                      {tec.calificacionPromedio > 0 ? (
+                        <span className="inline-flex items-center text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-bold text-xs space-x-1">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-500" />
+                          <span>{tec.calificacionPromedio}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[10px]">Sin CSAT</span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-200/80 text-center">
+                      <div className="bg-white p-2 rounded-xl border border-slate-200">
+                        <span className="text-[10px] text-slate-400 block">Asignados</span>
+                        <span className="text-xs font-black text-blue-700">{tec.asignados}</span>
+                      </div>
+                      <div className="bg-white p-2 rounded-xl border border-slate-200">
+                        <span className="text-[10px] text-slate-400 block">Resueltos</span>
+                        <span className="text-xs font-black text-emerald-700">{tec.resueltos}</span>
+                      </div>
+                      <div className="bg-white p-2 rounded-xl border border-slate-200">
+                        <span className="text-[10px] text-slate-400 block">T. Medio</span>
+                        <span className="text-xs font-black text-slate-700">{tec.tiempoPromedioHoras > 0 ? `${tec.tiempoPromedioHoras}h` : '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -489,7 +540,8 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Vista en Tabla para Desktop */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
@@ -545,6 +597,59 @@ export const AdminDashboardPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Vista en Tarjetas para Móviles (sin scroll horizontal) */}
+          <div className="block md:hidden space-y-2.5">
+            {auditLogs.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No hay registros de auditoría que coincidan con la búsqueda.
+              </div>
+            ) : (
+              auditLogs.map((log) => (
+                <div key={log.id} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-unalm-700 text-xs">
+                      {log.ticket_codigo || `ID #${log.ticket_id}`}
+                    </span>
+                    <span className="text-slate-400 font-mono text-[10px]">
+                      {new Date(log.fecha).toLocaleString('es-PE')}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-800">
+                      {log.usuario_nombre || 'Sistema'}
+                      {log.usuario_rol && <span className="text-[10px] text-slate-400 ml-1 font-normal">({log.usuario_rol})</span>}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white font-bold text-slate-700 text-[10px] border border-slate-200">
+                      {log.accion}
+                    </span>
+                  </div>
+
+                  {(log.campo_modificado || log.valor_nuevo) && (
+                    <div className="bg-white p-2 rounded-xl border border-slate-100 text-[11px] space-y-1">
+                      {log.campo_modificado && (
+                        <div className="text-slate-500">
+                          <span className="text-slate-400 font-medium">Campo: </span>
+                          <span className="font-mono text-slate-700">{log.campo_modificado}</span>
+                        </div>
+                      )}
+                      {log.valor_anterior && (
+                        <div className="text-slate-400 truncate">
+                          <span className="font-medium">Ant: </span>{log.valor_anterior}
+                        </div>
+                      )}
+                      {log.valor_nuevo && (
+                        <div className="text-slate-800 font-medium truncate">
+                          <span className="text-slate-400 font-medium">Nuevo: </span>{log.valor_nuevo}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

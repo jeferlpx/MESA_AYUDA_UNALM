@@ -439,9 +439,10 @@ export const AdminUsersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Users High-Efficiency Table */}
-      <div className="bg-white border border-slate-200 rounded-3xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Users High-Efficiency Table / Cards Container */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs overflow-hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse min-w-[1040px]">
             <thead>
               <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
@@ -611,6 +612,157 @@ export const AdminUsersPage: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards View (eliminates horizontal scrolling on mobile) */}
+        <div className="block md:hidden p-3 space-y-3 bg-slate-50/50">
+          {loading ? (
+            <div className="py-8 text-center text-slate-400 text-sm">
+              Cargando usuarios...
+            </div>
+          ) : paginatedUsers.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-sm">
+              No se encontraron usuarios con los filtros aplicados.
+            </div>
+          ) : (
+            paginatedUsers.map((u) => {
+              const roleBadge = ROLES_INFO[u.rolId] || ROLES_INFO[4];
+              const isTech = ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(u.rol);
+              const isEmailMissing = u.email.toLowerCase().startsWith('sin_correo_') || u.correoPendiente || u.email === '#N/D';
+              const isDependenciaMissing = !u.facultadDependencia || u.facultadDependencia.trim() === '#N/D';
+
+              return (
+                <div key={u.id} className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs space-y-3">
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      {u.fotoPerfil ? (
+                        <img
+                          src={getAssetUrl(u.fotoPerfil)}
+                          alt={u.nombres}
+                          className="w-10 h-10 rounded-full object-cover border border-amber-300 shadow-xs shrink-0 cursor-pointer"
+                          onClick={() => {
+                            if (isTech) {
+                              setHistoryTechId(u.id);
+                              setIsHistoryModalOpen(true);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-unalm-100 text-unalm-700 font-extrabold flex items-center justify-center text-xs border border-unalm-200 shrink-0">
+                          {u.nombres.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-slate-900 text-sm leading-tight truncate">
+                          {u.nombres} {u.apellidos}
+                        </h4>
+                        <span className="text-[11px] text-slate-500 font-medium block truncate mt-0.5">
+                          {u.cargo || 'Sin cargo especificado'}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        u.estado === 'ACTIVO'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-slate-200 text-slate-700 border border-slate-300'
+                      }`}
+                    >
+                      {u.estado}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${roleBadge.color}`}>
+                      {roleBadge.nombre}
+                    </span>
+                    {isTech && (
+                      <button
+                        onClick={() => {
+                          setHistoryTechId(u.id);
+                          setIsHistoryModalOpen(true);
+                        }}
+                        className="text-[10px] text-amber-700 hover:text-amber-800 font-extrabold flex items-center space-x-1 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200 transition-colors"
+                      >
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-500" />
+                        <span>{u.promedioCalificacion || 5.0} ({u.totalCalificaciones || 0} reseñas)</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="bg-slate-50 rounded-xl p-2.5 space-y-1.5 text-xs text-slate-600 border border-slate-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-400 text-[11px] shrink-0">Correo:</span>
+                      {isEmailMissing ? (
+                        <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                          #N/D (Sin Correo)
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[11px] text-slate-700 truncate">{u.email}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-400 text-[11px] shrink-0">Dependencia:</span>
+                      {isDependenciaMissing ? (
+                        <span className="inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                          #N/D (Sin Dep.)
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-medium text-slate-700 truncate max-w-[200px]" title={u.facultadDependencia}>
+                          {u.facultadDependencia}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-400 text-[11px] shrink-0">Contacto:</span>
+                      <span className="text-[11px] font-medium text-slate-700">
+                        {u.telefono || '—'} {u.anexo ? `(Anx: ${u.anexo})` : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                    <button
+                      onClick={() => handleOpenEditModal(u)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:text-unalm-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors flex items-center space-x-1.5 cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenPasswordModal(u)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors flex items-center space-x-1.5 cursor-pointer"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Clave</span>
+                    </button>
+                    <button
+                      onClick={() => handleToggleUserStatus(u)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors flex items-center space-x-1.5 cursor-pointer ${
+                        u.estado === 'ACTIVO'
+                          ? 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200'
+                          : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200'
+                      }`}
+                    >
+                      {u.estado === 'ACTIVO' ? (
+                        <>
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Desactivar</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Activar</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Pagination Controls */}
