@@ -16,6 +16,12 @@ export class UserModel {
     if (cleanEmail === 'mesa.sg@lamolina.edu.pe') candidateEmails.push('mesasg@lamolina.edu.pe');
     if (cleanEmail === 'solicitante@lamolina.edu.pe') candidateEmails.push('20220145@lamolina.edu.pe');
 
+    if (!cleanEmail.includes('@')) {
+      candidateEmails.push(`${cleanEmail}@lamolina.edu.pe`);
+    } else {
+      candidateEmails.push(cleanEmail.split('@')[0]);
+    }
+
     const [rows] = await dbPool.query<RowDataPacket[]>(
       `SELECT u.*, r.codigo as rol_codigo, r.nombre as rol_nombre
        FROM usuarios u

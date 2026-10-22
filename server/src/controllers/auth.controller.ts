@@ -123,24 +123,122 @@ export class AuthController {
         });
       }
 
-      // 1. Verificar si es una cuenta local de administración o contingencia (ej: admin / admin2026@)
+      // =========================================================================
+      // PRIORIDAD 1: Autenticación con Directorio Activo (LDAP UNALM)
+      // =========================================================================
+      let ldapSuccess = false;
+      let ldapAuthResult: any = null;
+
+      try {
+        ldapAuthResult = await LdapService.authenticate(username, password);
+        if (ldapAuthResult && ldapAuthResult.success && ldapAuthResult.user) {
+          ldapSuccess = true;
+        }
+      } catch (ldapErr: any) {
+        console.warn('[LDAP Auth Warning - Fallback a Local]:', ldapErr.message || ldapErr);
+      }
+
+      if (ldapSuccess && ldapAuthResult?.user) {
+        const ldapUser = ldapAuthResult.user;
+
+        // Buscar si el usuario ya existe en la base de datos local
+        let user = await UserModel.findByEmail(ldapUser.email);
+
+        if (!user) {
+          // Auto-aprovisionar usuario con rol Solicitante (id: 4)
+          const randomPasswordHash = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(), 10);
+          const newUserId = await UserModel.createUser({
+            nombres: ldapUser.nombres,
+            apellidos: ldapUser.apellidos,
+            email: ldapUser.email,
+            passwordHash: randomPasswordHash,
+            rolId: 4, // Rol SOLICITANTE
+            facultadDependencia: ldapUser.facultadDependencia || 'Comunidad Universitaria UNALM',
+            cargo: ldapUser.cargo || 'Usuario Institucional',
+            telefono: ldapUser.telefono,
+            anexo: ldapUser.anexo,
+          });
+
+          user = await UserModel.findById(newUserId);
+        } else {
+          if (user.estado === 'BLOQUEADO') {
+            return res.status(403).json({
+              success: false,
+              message: 'Su cuenta se encuentra bloqueada en la Mesa de Ayuda. Por favor comuníquese con OTIC.',
+            });
+          }
+          await UserModel.updateLastLogin(user.id);
+        }
+
+        if (!user) {
+          return res.status(500).json({
+            success: false,
+            message: 'Error al cargar o registrar el perfil de usuario desde Directorio Activo.',
+          });
+        }
+
+        const payload: UserTokenPayload = {
+          id: user.id,
+          email: user.email,
+          nombres: user.nombres,
+          apellidos: user.apellidos,
+          rol: user.rol_codigo,
+          rol_id: user.rol_id,
+          facultad_dependencia: user.facultad_dependencia,
+          cargo: user.cargo,
+        };
+
+        const token = jwt.sign(payload, env.JWT_SECRET, {
+          expiresIn: (env.JWT_EXPIRES_IN || '8h') as any,
+        });
+
+        return res.json({
+          success: true,
+          message: 'Autenticación exitosa con Directorio Activo UNALM',
+          data: {
+            token,
+            authType: 'LDAP',
+            user: {
+              id: user.id,
+              nombres: user.nombres,
+              apellidos: user.apellidos,
+              email: user.email,
+              rol: user.rol_codigo,
+              rolNombre: user.rol_nombre,
+              facultadDependencia: user.facultad_dependencia,
+              cargo: user.cargo,
+              telefono: user.telefono,
+              anexo: user.anexo,
+              fotoPerfil: user.foto_perfil,
+              debeCambiarPassword: false,
+              correoPendiente: false,
+            },
+          },
+        });
+      }
+
+      // =========================================================================
+      // PRIORIDAD 2: Base de Datos Local (+1400 usuarios institucionales, pass 123456 / contingencia)
+      // Se evalúa cuando el usuario no está en AD, las credenciales AD no coinciden o LDAP está fuera de línea
+      // =========================================================================
       const localCandidate = await UserModel.findByEmail(username);
       if (localCandidate && localCandidate.password_hash) {
         let isLocalPasswordValid = await bcrypt.compare(password, localCandidate.password_hash);
         if (!isLocalPasswordValid) {
           const validTestPasswords = [
+            '123456',
             'Unalm2026$',
             'admin123',
             'mesa123',
             'tecnico123',
             'super123',
             'solicita123',
-            '123456',
           ];
           if (validTestPasswords.includes(password)) {
             isLocalPasswordValid = true;
           }
         }
+
         if (isLocalPasswordValid) {
           if (localCandidate.estado === 'BLOQUEADO') {
             return res.status(403).json({
@@ -148,6 +246,7 @@ export class AuthController {
               message: 'Su cuenta se encuentra bloqueada en la Mesa de Ayuda.',
             });
           }
+
           await UserModel.updateLastLogin(localCandidate.id);
           const payload: UserTokenPayload = {
             id: localCandidate.id,
@@ -159,15 +258,17 @@ export class AuthController {
             facultad_dependencia: localCandidate.facultad_dependencia,
             cargo: localCandidate.cargo,
           };
+
           const token = jwt.sign(payload, env.JWT_SECRET, {
             expiresIn: (env.JWT_EXPIRES_IN || '8h') as any,
           });
+
           return res.json({
             success: true,
-            message: 'Autenticación exitosa',
+            message: 'Autenticación exitosa (Cuenta Local)',
             data: {
               token,
-              authType: 'LOCAL_ADMIN',
+              authType: 'LOCAL',
               user: {
                 id: localCandidate.id,
                 nombres: localCandidate.nombres,
@@ -180,99 +281,18 @@ export class AuthController {
                 telefono: localCandidate.telefono,
                 anexo: localCandidate.anexo,
                 fotoPerfil: localCandidate.foto_perfil,
-                debeCambiarPassword: false,
-                correoPendiente: false,
+                debeCambiarPassword: Boolean(localCandidate.debe_cambiar_password),
+                correoPendiente: Boolean(localCandidate.correo_pendiente),
               },
             },
           });
         }
       }
 
-      const authResult = await LdapService.authenticate(username, password);
-
-      if (!authResult.success || !authResult.user) {
-        return res.status(401).json({
-          success: false,
-          message: authResult.message || 'Credenciales de Directorio Activo inválidas o error de conexión con el dominio.',
-          configured: authResult.configured !== false,
-        });
-      }
-
-      const ldapUser = authResult.user;
-
-      // Buscar si el usuario ya existe en la base de datos local
-      let user = await UserModel.findByEmail(ldapUser.email);
-
-      if (!user) {
-        // Auto-aprovisionar usuario con rol Solicitante (id: 4)
-        const randomPasswordHash = await bcrypt.hash(Math.random().toString(36) + Date.now().toString(), 10);
-        const newUserId = await UserModel.createUser({
-          nombres: ldapUser.nombres,
-          apellidos: ldapUser.apellidos,
-          email: ldapUser.email,
-          passwordHash: randomPasswordHash,
-          rolId: 4, // Rol SOLICITANTE
-          facultadDependencia: ldapUser.facultadDependencia || 'Comunidad Universitaria UNALM',
-          cargo: ldapUser.cargo || 'Usuario Institucional',
-          telefono: ldapUser.telefono,
-          anexo: ldapUser.anexo,
-        });
-
-        user = await UserModel.findById(newUserId);
-      } else {
-        if (user.estado === 'BLOQUEADO') {
-          return res.status(403).json({
-            success: false,
-            message: 'Su cuenta se encuentra bloqueada en la Mesa de Ayuda. Por favor comuníquese con OTIC.',
-          });
-        }
-        await UserModel.updateLastLogin(user.id);
-      }
-
-      if (!user) {
-        return res.status(500).json({
-          success: false,
-          message: 'Error al cargar o registrar el perfil de usuario desde Directorio Activo.',
-        });
-      }
-
-      const payload: UserTokenPayload = {
-        id: user.id,
-        email: user.email,
-        nombres: user.nombres,
-        apellidos: user.apellidos,
-        rol: user.rol_codigo,
-        rol_id: user.rol_id,
-        facultad_dependencia: user.facultad_dependencia,
-        cargo: user.cargo,
-      };
-
-      const token = jwt.sign(payload, env.JWT_SECRET, {
-        expiresIn: (env.JWT_EXPIRES_IN || '8h') as any,
-      });
-
-      return res.json({
-        success: true,
-        message: 'Autenticación exitosa con Directorio Activo UNALM',
-        data: {
-          token,
-          authType: 'LDAP',
-          user: {
-            id: user.id,
-            nombres: user.nombres,
-            apellidos: user.apellidos,
-            email: user.email,
-            rol: user.rol_codigo,
-            rolNombre: user.rol_nombre,
-            facultadDependencia: user.facultad_dependencia,
-            cargo: user.cargo,
-            telefono: user.telefono,
-            anexo: user.anexo,
-            fotoPerfil: user.foto_perfil,
-            debeCambiarPassword: false,
-            correoPendiente: false,
-          },
-        },
+      // Si no autenticó en Directorio Activo ni en la base de datos local
+      return res.status(401).json({
+        success: false,
+        message: 'Credenciales inválidas. Verifique su usuario institucional o contraseña.',
       });
     } catch (error: any) {
       console.error('[AuthController.ldapLogin error]:', error);
