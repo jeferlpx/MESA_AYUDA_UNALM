@@ -482,22 +482,24 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
         </div>
       </div>
 
-      {/* Queue Tabs Bar */}
-      <div className="flex items-center space-x-2 overflow-x-auto pb-1 no-scrollbar">
+      {/* Queue Tabs Bar - Rejilla responsiva en móviles (sin scroll horizontal) y fila flex en desktop */}
+      <div className="grid grid-cols-2 md:flex md:items-center md:space-x-2 gap-2 md:gap-0 pb-1">
         {isMesaAyudaOrAdmin && (
           <button
             onClick={() => setActiveQueueTab('REPORTADO')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${activeQueueTab === 'REPORTADO'
-              ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            className={`w-full md:w-auto px-3 sm:px-4 py-2.5 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between md:justify-start space-x-2 shrink-0 ${activeQueueTab === 'REPORTADO'
+              ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold ring-1 ring-amber-400'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
               }`}
           >
-            <Inbox className="w-4 h-4" />
-            <span>Reportados (sin asignar)</span>
+            <div className="flex items-center space-x-2 min-w-0">
+              <Inbox className="w-4 h-4 shrink-0 text-amber-950 dark:text-amber-400" />
+              <span className="truncate">Reportados <span className="hidden sm:inline">(sin asignar)</span></span>
+            </div>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeQueueTab === 'REPORTADO'
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${activeQueueTab === 'REPORTADO'
                 ? 'bg-slate-950 text-amber-400'
-                : 'bg-amber-100 text-amber-800'
+                : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
                 }`}
             >
               {counts.reportados}
@@ -509,17 +511,19 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
         {isMesaAyudaOrAdmin && (
           <button
             onClick={() => setActiveQueueTab('OBSERVADO')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${activeQueueTab === 'OBSERVADO'
-              ? 'bg-amber-600 text-white shadow-md font-extrabold'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+            className={`w-full md:w-auto px-3 sm:px-4 py-2.5 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between md:justify-start space-x-2 shrink-0 ${activeQueueTab === 'OBSERVADO'
+              ? 'bg-amber-600 text-white shadow-md font-extrabold ring-1 ring-amber-400'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
               }`}
           >
-            <AlertTriangle className="w-4 h-4 text-amber-300" />
-            <span>OBSERVADOS</span>
+            <div className="flex items-center space-x-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="truncate">OBSERVADOS</span>
+            </div>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeQueueTab === 'OBSERVADO'
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${activeQueueTab === 'OBSERVADO'
                 ? 'bg-white text-amber-900'
-                : 'bg-amber-100 text-amber-800'
+                : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
                 }`}
             >
               {counts.observados}
@@ -531,17 +535,19 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
         {(isSGUser || user?.rol === 'MESA_AYUDA_SG') && (
           <button
             onClick={() => setActiveQueueTab('SIGI_PREVENTIVA')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${activeQueueTab === 'SIGI_PREVENTIVA'
-              ? 'bg-rose-600 text-white shadow-md font-black'
-              : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'
+            className={`w-full md:w-auto px-3 sm:px-4 py-2.5 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between md:justify-start space-x-2 shrink-0 ${activeQueueTab === 'SIGI_PREVENTIVA'
+              ? 'bg-rose-600 text-white shadow-md font-black ring-1 ring-rose-400'
+              : 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50'
               }`}
           >
-            <ShieldAlert className="w-4 h-4 text-rose-500" />
-            <span>🚨 REPORTADO - SIGI PREVENTIVA</span>
+            <div className="flex items-center space-x-2 min-w-0">
+              <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
+              <span className="truncate">SIGI Preventiva</span>
+            </div>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeQueueTab === 'SIGI_PREVENTIVA'
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${activeQueueTab === 'SIGI_PREVENTIVA'
                 ? 'bg-white text-rose-950 font-black'
-                : 'bg-rose-100 text-rose-800 font-extrabold'
+                : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300'
                 }`}
             >
               {counts.sigiPreventiva}
@@ -551,17 +557,22 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
         <button
           onClick={() => setActiveQueueTab('ASIGNADO')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${activeQueueTab === 'ASIGNADO'
-            ? 'bg-blue-600 text-white shadow-md font-extrabold'
-            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+          className={`w-full md:w-auto px-3 sm:px-4 py-2.5 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between md:justify-start space-x-2 shrink-0 ${activeQueueTab === 'ASIGNADO'
+            ? 'bg-blue-600 text-white shadow-md font-extrabold ring-1 ring-blue-400'
+            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
             }`}
         >
-          <UserCheck className="w-4 h-4" />
-          <span>{isTechnicianOnly ? 'Mis Tickets en Atención' : 'ASIGNADOS (En Atención)'}</span>
+          <div className="flex items-center space-x-2 min-w-0">
+            <UserCheck className="w-4 h-4 shrink-0 text-blue-400" />
+            <span className="truncate">
+              {isTechnicianOnly ? 'Mis Tickets' : 'ASIGNADOS'}
+              <span className="hidden sm:inline"> {isTechnicianOnly ? 'en Atención' : '(En Atención)'}</span>
+            </span>
+          </div>
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeQueueTab === 'ASIGNADO'
+            className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${activeQueueTab === 'ASIGNADO'
               ? 'bg-white text-blue-800'
-              : 'bg-blue-100 text-blue-800'
+              : 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300'
               }`}
           >
             {counts.asignados}
@@ -570,17 +581,19 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
         <button
           onClick={() => setActiveQueueTab('RESUELTO')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${activeQueueTab === 'RESUELTO'
-            ? 'bg-emerald-600 text-white shadow-md font-extrabold'
-            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+          className={`w-full md:w-auto px-3 sm:px-4 py-2.5 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between md:justify-start space-x-2 shrink-0 ${activeQueueTab === 'RESUELTO'
+            ? 'bg-emerald-600 text-white shadow-md font-extrabold ring-1 ring-emerald-400'
+            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
             }`}
         >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>RESUELTOS (Solucionados)</span>
+          <div className="flex items-center space-x-2 min-w-0">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span className="truncate">RESUELTOS <span className="hidden sm:inline">(Solucionados)</span></span>
+          </div>
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeQueueTab === 'RESUELTO'
+            className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${activeQueueTab === 'RESUELTO'
               ? 'bg-white text-emerald-800'
-              : 'bg-emerald-100 text-emerald-800'
+              : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
               }`}
           >
             {counts.resueltos}
@@ -589,17 +602,21 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
         <button
           onClick={() => setActiveQueueTab('ALL')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 shrink-0 ${activeQueueTab === 'ALL'
-            ? 'bg-slate-800 text-white shadow-md font-extrabold'
-            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+          className={`w-full md:w-auto px-3 sm:px-4 py-2.5 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between md:justify-start space-x-2 shrink-0 ${
+            !isSGUser && user?.rol !== 'MESA_AYUDA_SG' ? 'col-span-2 md:col-span-1' : ''
+          } ${activeQueueTab === 'ALL'
+            ? 'bg-slate-800 text-white shadow-md font-extrabold ring-1 ring-slate-700'
+            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
             }`}
         >
-          <Layers className="w-4 h-4" />
-          <span>Todos los Tickets</span>
+          <div className="flex items-center space-x-2 min-w-0">
+            <Layers className="w-4 h-4 shrink-0 text-slate-400" />
+            <span className="truncate">Todos los Tickets</span>
+          </div>
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeQueueTab === 'ALL'
+            className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${activeQueueTab === 'ALL'
               ? 'bg-white text-slate-900'
-              : 'bg-slate-200 text-slate-700'
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
           >
             {counts.total}

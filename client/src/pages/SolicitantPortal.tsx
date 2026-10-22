@@ -805,22 +805,22 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
 
           {/* Module Filter Tabs for My Tickets */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-2xl overflow-x-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-3 md:flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setActiveTicketModule('ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                   activeTicketModule === 'ALL'
                     ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Todos los Módulos ({myTickets.length})
+                Todos ({myTickets.length})
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTicketModule('OTIC')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                   activeTicketModule === 'OTIC'
                     ? 'bg-unalm-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -831,7 +831,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTicketModule('SERVICIOS_GENERALES')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                   activeTicketModule === 'SERVICIOS_GENERALES'
                     ? 'bg-amber-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -842,11 +842,11 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
             </div>
 
             {/* Status Filter Tabs */}
-            <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
+            <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1.5 md:gap-1 bg-slate-100 p-1.5 md:p-1 rounded-2xl md:rounded-xl w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`col-span-2 sm:col-span-1 px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
                   ticketStatusFilter === 'ALL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -855,8 +855,8 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('REPORTADO')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  ticketStatusFilter === 'REPORTADO' ? 'bg-amber-500 text-slate-950 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                  ticketStatusFilter === 'REPORTADO' ? 'bg-amber-500 text-slate-950 shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 Reportados ({countReportados})
@@ -864,8 +864,8 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('OBSERVADO')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  ticketStatusFilter === 'OBSERVADO' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                  ticketStatusFilter === 'OBSERVADO' ? 'bg-amber-600 text-white shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 Observados ({countObservados})
@@ -873,8 +873,8 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('ASIGNADO')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  ticketStatusFilter === 'ASIGNADO' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                  ticketStatusFilter === 'ASIGNADO' ? 'bg-blue-600 text-white shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 Asignados ({countAsignados})
@@ -882,8 +882,8 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('RESUELTO')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  ticketStatusFilter === 'RESUELTO' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                  ticketStatusFilter === 'RESUELTO' ? 'bg-emerald-600 text-white shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 Resueltos ({countResueltos})
