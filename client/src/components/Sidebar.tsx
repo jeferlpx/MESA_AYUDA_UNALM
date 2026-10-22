@@ -21,11 +21,23 @@ import {
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onCloseMobile?: () => void;
+  isMobileDrawer?: boolean;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  activeTab,
+  onTabChange,
+  onCloseMobile,
+  isMobileDrawer = false,
+}) => {
   const { user } = useAuth();
   const [pendingSurveysCount, setPendingSurveysCount] = useState<number>(0);
+
+  const handleTabClick = (tab: string) => {
+    onTabChange(tab);
+    if (onCloseMobile) onCloseMobile();
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -61,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   const canAccessSGManagement = user?.rol && ['ADMIN', 'MESA_AYUDA_SG'].includes(user.rol);
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between border-r border-slate-800 shrink-0 select-none print:hidden">
+    <aside className={`${isMobileDrawer ? 'w-full min-h-full' : 'w-64 min-h-[calc(100vh-4rem)]'} bg-slate-900 text-slate-300 p-4 flex flex-col justify-between border-r border-slate-800 shrink-0 select-none print:hidden`}>
       <div className="space-y-6">
         {/* Module title */}
         <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
@@ -77,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 1. Dashboard Directivo OTIC (Admin General / Supervisor) */}
           {isAdmin && (
             <button
-              onClick={() => onTabChange('admin-dashboard')}
+              onClick={() => handleTabClick('admin-dashboard')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'admin-dashboard'
                   ? 'bg-unalm-600 text-white shadow-md font-bold'
@@ -92,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 1.1 Dashboard Especializado Servicios Generales (Mesa de Ayuda SG & Admin) */}
           {canAccessSGManagement && (
             <button
-              onClick={() => onTabChange('sg-dashboard')}
+              onClick={() => handleTabClick('sg-dashboard')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'sg-dashboard'
                   ? 'bg-amber-600 text-white shadow-md font-bold'
@@ -107,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 2. Cola de Tickets / Triage de Mesa de Ayuda (Especialistas / Técnicos) */}
           {isSpecialist && (
             <button
-              onClick={() => onTabChange('specialist')}
+              onClick={() => handleTabClick('specialist')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'specialist'
                   ? 'bg-unalm-600 text-white shadow-md font-bold'
@@ -141,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 3. Módulo para Técnicos / Especialistas: Mis Requerimientos Atendidos */}
           {isSpecialist && (
             <button
-              onClick={() => onTabChange('tech-attended')}
+              onClick={() => handleTabClick('tech-attended')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'tech-attended'
                   ? 'bg-unalm-600 text-white shadow-md font-bold'
@@ -155,7 +167,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
           {/* 4. Catálogo de Servicios (Nuevo Requerimiento) */}
           <button
-            onClick={() => onTabChange('catalog')}
+            onClick={() => handleTabClick('catalog')}
             className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               activeTab === 'catalog'
                 ? 'bg-unalm-600 text-white shadow-md font-bold'
@@ -168,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
           {/* 5. Mis Requerimientos Registrados (Historial propio de tickets solicitados) */}
           <button
-            onClick={() => onTabChange('my-tickets')}
+            onClick={() => handleTabClick('my-tickets')}
             className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               activeTab === 'my-tickets'
                 ? 'bg-unalm-600 text-white shadow-md font-bold'
@@ -181,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
 
           {/* 5.1 Calificaciones Pendientes (con animación parpadeante / pulse si hay encuestas pendientes) */}
           <button
-            onClick={() => onTabChange('pending-surveys')}
+            onClick={() => handleTabClick('pending-surveys')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
               activeTab === 'pending-surveys'
                 ? 'bg-amber-600 text-white shadow-md font-bold'
@@ -204,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 6. Matriz de Control y Seguimiento de Órdenes de Trabajo (Historial OCI SG - Exclusivo ADMIN y MESA_AYUDA_SG) */}
           {canAccessSGManagement && (
             <button
-              onClick={() => onTabChange('sg-work-orders')}
+              onClick={() => handleTabClick('sg-work-orders')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'sg-work-orders'
                   ? 'bg-amber-600 text-white shadow-md font-bold'
@@ -219,7 +231,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 7. Módulo de Inventario de Materiales e Insumos de Talleres SG (Exclusivo ADMIN y MESA_AYUDA_SG) */}
           {canAccessSGManagement && (
             <button
-              onClick={() => onTabChange('sg-inventory')}
+              onClick={() => handleTabClick('sg-inventory')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'sg-inventory'
                   ? 'bg-amber-600 text-white shadow-md font-bold'
@@ -234,7 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 8. Módulo de Inspecciones Preventivas SIGI (Servicios Generales & Directivos) */}
           {(isSGUser || isAdmin) && (
             <button
-              onClick={() => onTabChange('infrastructure-inspections')}
+              onClick={() => handleTabClick('infrastructure-inspections')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'infrastructure-inspections'
                   ? 'bg-amber-600 text-white shadow-md font-bold'
@@ -249,7 +261,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 7. Gestión de Usuarios (CRUD - Admin) */}
           {isAdmin && (
             <button
-              onClick={() => onTabChange('admin-users')}
+              onClick={() => handleTabClick('admin-users')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'admin-users'
                   ? 'bg-unalm-600 text-white shadow-md font-bold'
@@ -264,7 +276,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           {/* 8. Catálogo & Matriz SLA (Admin) */}
           {isAdmin && (
             <button
-              onClick={() => onTabChange('admin-catalog')}
+              onClick={() => handleTabClick('admin-catalog')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                 activeTab === 'admin-catalog'
                   ? 'bg-unalm-600 text-white shadow-md font-bold'

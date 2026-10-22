@@ -8,6 +8,7 @@ import { ServiceRequestModal } from '../components/ServiceRequestModal';
 import { WorkOrderModal } from '../components/WorkOrderModal';
 import { SGFieldTimelineTracker } from '../components/SGFieldTimelineTracker';
 import { Modal } from '../components/Modal';
+import { WhatsAppButton } from '../components/WhatsAppButton';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 
@@ -689,12 +690,43 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
               </div>
 
               <div>
-                <span className="text-slate-400 font-bold block text-[11px]">Celular & Anexo:</span>
-                <span className="font-semibold text-slate-700">
-                  {ticket.solicitante_telefono || 'Sin celular registrado'}
-                  {ticket.solicitante_anexo ? ` (Anexo: ${ticket.solicitante_anexo})` : ''}
-                </span>
+                <span className="text-slate-400 font-bold block text-[11px]">Celular & Anexo del Solicitante:</span>
+                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                  <span className="font-bold text-slate-900">
+                    {ticket.solicitante_telefono || 'Sin celular registrado'}
+                    {ticket.solicitante_anexo ? ` (Anexo: ${ticket.solicitante_anexo})` : ''}
+                  </span>
+                  <WhatsAppButton
+                    phone={ticket.solicitante_telefono}
+                    label="Contactar por WhatsApp"
+                    defaultMessage={`Hola ${ticket.solicitante_nombre}, le escribimos de la Mesa de Ayuda UNALM respecto a su ticket ${ticket.codigo_correlativo}: "${ticket.titulo}".`}
+                  />
+                </div>
               </div>
+
+              {ticket.contacto_local && (
+                <div>
+                  <span className="text-slate-400 font-bold block text-[11px]">Contacto de Referencia:</span>
+                  <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                    <span className="font-bold text-slate-900">{ticket.contacto_local}</span>
+                    <WhatsAppButton
+                      phone={ticket.contacto_local}
+                      label="Contactar por WhatsApp"
+                      defaultMessage={`Hola, le escribimos de la Mesa de Ayuda UNALM respecto al requerimiento ${ticket.codigo_correlativo}: "${ticket.titulo}".`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {ticket.horario_acceso && (
+                <div>
+                  <span className="text-slate-400 font-bold block text-[11px]">Horario Preferente de Atención:</span>
+                  <div className="flex items-center space-x-1.5 mt-0.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span className="font-bold text-slate-900">{ticket.horario_acceso}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -926,9 +958,16 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
                     </div>
                   )}
                   {ticket.tecnico_telefono && (
-                    <div className="flex items-center space-x-2">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>{ticket.tecnico_telefono}</span>
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="font-semibold text-slate-800">{ticket.tecnico_telefono}</span>
+                      </div>
+                      <WhatsAppButton
+                        phone={ticket.tecnico_telefono}
+                        label="WhatsApp"
+                        defaultMessage={`Hola ${ticket.tecnico_nombre}, le escribo respecto al ticket ${ticket.codigo_correlativo}: "${ticket.titulo}".`}
+                      />
                     </div>
                   )}
                 </div>
@@ -958,11 +997,13 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
                       {ticket.tecnicos_adicionales.map((coTec) => (
                         <div
                           key={coTec.id}
-                          onClick={() => setSelectedTechProfileId(coTec.id)}
-                          className="flex items-center justify-between p-2 rounded-xl bg-amber-50/60 hover:bg-amber-100/60 border border-amber-200 transition-colors cursor-pointer group"
-                          title="Ver récord del especialista"
+                          className="flex items-center justify-between p-2 rounded-xl bg-amber-50/60 hover:bg-amber-100/60 border border-amber-200 transition-colors group"
                         >
-                          <div className="flex items-center space-x-2 truncate">
+                          <div
+                            onClick={() => setSelectedTechProfileId(coTec.id)}
+                            className="flex items-center space-x-2 truncate cursor-pointer flex-1"
+                            title="Ver récord del especialista"
+                          >
                             {coTec.foto_perfil ? (
                               <img
                                 src={getAssetUrl(coTec.foto_perfil)}
@@ -985,7 +1026,23 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
                               )}
                             </div>
                           </div>
-                          <Eye className="w-3 h-3 text-amber-700 shrink-0 ml-1 opacity-70 group-hover:opacity-100" />
+                          <div className="flex items-center space-x-1.5 shrink-0 ml-2">
+                            {coTec.telefono && (
+                              <WhatsAppButton
+                                phone={coTec.telefono}
+                                compact={true}
+                                defaultMessage={`Hola ${coTec.nombres}, le escribo respecto al ticket ${ticket.codigo_correlativo}: "${ticket.titulo}".`}
+                              />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTechProfileId(coTec.id)}
+                              className="p-1 text-amber-700 hover:text-amber-900 rounded"
+                              title="Ver perfil"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

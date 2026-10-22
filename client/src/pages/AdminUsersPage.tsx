@@ -26,6 +26,7 @@ import {
   Star,
   Camera,
   Upload,
+  Network,
 } from 'lucide-react';
 
 const ROLES_INFO: Record<number, { codigo: string; nombre: string; color: string }> = {
@@ -87,8 +88,31 @@ export const AdminUsersPage: React.FC = () => {
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
   const [removePhotoFlag, setRemovePhotoFlag] = useState<boolean>(false);
 
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [syncingLdap, setSyncingLdap] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleExecuteSyncLdap = async () => {
+    try {
+      setSyncingLdap(true);
+      const res = await api.syncLdapUsers();
+      if (res.success) {
+        toast.success(
+          `Sincronización con Directorio Activo completada: Cuentas institucionales actualizadas exitosamente.`,
+          'Directorio Activo UNALM'
+        );
+        setIsSyncModalOpen(false);
+        loadUsers();
+      } else {
+        toast.error(res.message || 'Error en la sincronización con LDAP', 'Directorio Activo');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al conectar con el Directorio Activo', 'Error');
+    } finally {
+      setSyncingLdap(false);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -330,13 +354,29 @@ export const AdminUsersPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-5 py-3 bg-unalm-600 hover:bg-unalm-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all flex items-center space-x-2 shrink-0 self-start sm:self-auto"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Registrar Nuevo Usuario</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
+          <button
+            onClick={() => setIsSyncModalOpen(true)}
+            disabled={syncingLdap}
+            className="px-4 py-3 bg-sky-700 hover:bg-sky-800 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+            title="Importar y sincronizar usuarios en tiempo real desde el Directorio Activo (172.16.0.8)"
+          >
+            {syncingLdap ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Network className="w-4 h-4 text-sky-200" />
+            )}
+            <span>{syncingLdap ? 'Sincronizando AD...' : 'Sincronizar Directorio Activo'}</span>
+          </button>
+
+          <button
+            onClick={handleOpenCreateModal}
+            className="px-5 py-3 bg-unalm-600 hover:bg-unalm-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Registrar Nuevo Usuario</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -1097,6 +1137,89 @@ export const AdminUsersPage: React.FC = () => {
         }}
         technicianId={historyTechId}
       />
+
+      {/* LDAP SYNCHRONIZATION CONFIRMATION MODAL */}
+      <Modal
+        isOpen={isSyncModalOpen}
+        onClose={() => !syncingLdap && setIsSyncModalOpen(false)}
+        title="Sincronización con Directorio Activo (LDAP)"
+        subtitle="Controlador de Dominio Institucional UNALM"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 flex items-start space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-sky-600/15 dark:bg-sky-500/20 text-sky-600 dark:text-sky-300 flex items-center justify-center shrink-0 mt-0.5">
+              <Network className="w-5 h-5" />
+            </div>
+            <div className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+              <span className="font-extrabold text-slate-900 dark:text-white block text-sm">
+                Domain Controller (172.16.0.8:636)
+              </span>
+              <p className="leading-relaxed">
+                Esta operación importará y sincronizará en tiempo real todas las cuentas institucionales registradas en el Directorio Activo (<code className="text-sky-700 dark:text-sky-300 font-bold font-mono">@lamolina.edu.pe</code>).
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+            <span className="font-bold text-slate-800 dark:text-slate-200 block">Detalles del Proceso:</span>
+            <ul className="space-y-1.5 text-slate-600 dark:text-slate-300">
+              <li className="flex items-center space-x-2">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>Actualiza nombres, apellidos, correo institucional y facultades/dependencias oficiales.</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>Registra automáticamente nuevas cuentas docentes y no docentes del campus.</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <Shield className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                <span className="font-semibold text-purple-900 dark:text-purple-300">
+                  Protección activa: El usuario Administrador y personal técnico están protegidos permanentemente.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          {syncingLdap && (
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center space-x-2.5 text-xs text-amber-800 dark:text-amber-300 animate-pulse">
+              <RefreshCw className="w-4 h-4 animate-spin text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="font-semibold">
+                Sincronizando cuentas con el servidor LDAP... Por favor espere unos momentos.
+              </span>
+            </div>
+          )}
+
+          <div className="pt-3 flex justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              disabled={syncingLdap}
+              onClick={() => setIsSyncModalOpen(false)}
+              className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={syncingLdap}
+              onClick={handleExecuteSyncLdap}
+              className="px-5 py-2.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+            >
+              {syncingLdap ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Sincronizando...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Sincronizar Ahora</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

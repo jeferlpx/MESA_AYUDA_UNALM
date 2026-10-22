@@ -124,7 +124,9 @@ export const SearchableDependenciaSelect: React.FC<SearchableDependenciaSelectPr
             className={`w-5 h-5 shrink-0 ${isDark ? 'text-unalm-400' : 'text-unalm-600'}`}
           />
           {value ? (
-            <span className="text-xs sm:text-sm font-semibold text-white break-words leading-snug">
+            <span className={`text-xs sm:text-sm font-semibold break-words leading-snug ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}>
               {value}
             </span>
           ) : (
@@ -143,7 +145,9 @@ export const SearchableDependenciaSelect: React.FC<SearchableDependenciaSelectPr
                 onChange('');
                 setSearch('');
               }}
-              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className={`p-1.5 rounded-lg transition-colors ${
+                isDark ? 'hover:bg-slate-800 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-700'
+              }`}
               title="Limpiar selección"
             >
               <X className="w-4 h-4" />
@@ -254,7 +258,7 @@ export const SearchableDependenciaSelect: React.FC<SearchableDependenciaSelectPr
                           }`}
                         >
                           <div className="flex-1 pr-3 whitespace-normal break-words leading-relaxed">
-                            <span className="font-medium text-slate-100">{unit.nombre}</span>
+                            <span className={`font-medium ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{unit.nombre}</span>
                             {unit.sigla && (
                               <span
                                 className={`ml-2 inline-block text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded-md font-bold align-middle ${

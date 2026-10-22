@@ -159,7 +159,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         }}
       />
 
-      {/* Drop zone inicial si no hay archivos */}
+      {/* Drop zone inicial compacta y elegante */}
       {currentFiles.length === 0 ? (
         <div
           onDragOver={(e) => {
@@ -169,27 +169,34 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+          className={`border border-dashed rounded-2xl p-3 sm:py-3 sm:px-4 cursor-pointer transition-all flex items-center justify-between gap-3 ${
             isDragging
               ? 'border-unalm-600 bg-unalm-50/80 scale-[0.99]'
-              : 'border-slate-300 hover:border-unalm-500 bg-slate-50/50 hover:bg-slate-100/50 shadow-2xs'
+              : 'border-slate-300 hover:border-unalm-500 bg-slate-50/60 hover:bg-slate-100/70 shadow-2xs'
           }`}
         >
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-unalm-100/80 flex items-center justify-center text-unalm-600 mb-3 shadow-xs">
-            <UploadCloud className="w-6 h-6" />
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-unalm-100 flex items-center justify-center text-unalm-700 shrink-0 shadow-2xs">
+              <UploadCloud className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-xs font-bold text-slate-800 truncate">
+                {isCompressing ? (
+                  <span className="text-unalm-600 animate-pulse">Optimizando y comprimiendo archivos...</span>
+                ) : (
+                  <>
+                    Arrastre sus archivos aquí o <span className="text-unalm-600 underline">examine en su equipo</span>
+                  </>
+                )}
+              </p>
+              <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
+                Fotos o documentos: PDF, JPG, PNG, DOCX (Hasta {maxFiles} archivos, 10MB c/u)
+              </p>
+            </div>
           </div>
-          <p className="text-sm font-bold text-slate-800">
-            {isCompressing ? (
-              <span className="text-unalm-600 animate-pulse">Optimizando y comprimiendo archivos...</span>
-            ) : (
-              <>
-                Arrastre sus archivos aquí o <span className="text-unalm-600 underline">examine en su equipo</span>
-              </>
-            )}
-          </p>
-          <p className="text-xs text-slate-500 mt-1">
-            Permite subir múltiples fotos/documentos: PDF, JPG, PNG, DOCX (Hasta {maxFiles} archivos, 10MB c/u)
-          </p>
+          <span className="shrink-0 px-2.5 py-1 text-[11px] font-bold text-unalm-700 bg-white border border-slate-200 rounded-lg shadow-2xs hover:bg-unalm-50 transition-colors">
+            Examinar
+          </span>
         </div>
       ) : (
         /* Lista de archivos adjuntos */

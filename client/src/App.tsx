@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/Toast';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
@@ -16,11 +17,13 @@ import { SGInventoryPage } from './pages/SGInventoryPage';
 import { SGDashboardPage } from './pages/SGDashboardPage';
 import { TicketDetailPage } from './pages/TicketDetailPage';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
+import { X } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
   const { user, isAuthenticated, loading, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('catalog');
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   // Inicializar la pestaña según el perfil del usuario:
   // Mesa de Ayuda SG aterriza en su nuevo Dashboard interactivo de SG
@@ -88,18 +91,72 @@ const MainLayout: React.FC = () => {
     Boolean(user && (user.debeCambiarPassword || user.correoPendiente || isMissingDependencia));
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col print:min-h-0 print:bg-white">
-      <Navbar />
-      <div className="flex flex-1 print:block">
-        <Sidebar
-          activeTab={selectedTicketId ? 'detail' : safeActiveTab}
-          onTabChange={(tab) => {
-            setSelectedTicketId(null);
-            setActiveTab(tab);
-          }}
-        />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col print:min-h-0 print:bg-white transition-colors duration-150">
+      <Navbar
+        onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
+        isMobileMenuOpen={isMobileMenuOpen}
+      />
 
-        <main className="flex-1 overflow-y-auto print:overflow-visible print:h-auto print:block print:p-0">
+      {/* Mobile Slide-Over Drawer with Backdrop */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer panel */}
+          <div className="relative w-72 max-w-[85vw] bg-slate-900 h-full flex flex-col z-10 shadow-2xl animate-in slide-in-from-left duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-xs">
+                  <img src="./escudo-color.png" alt="UNALM" className="w-full h-full object-contain" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-white text-xs block leading-tight">Mesa de Ayuda UNALM</span>
+                  <span className="text-[10px] text-slate-400">Navegación de Módulos</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Cerrar menú"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <Sidebar
+                activeTab={selectedTicketId ? 'detail' : safeActiveTab}
+                onTabChange={(tab) => {
+                  setSelectedTicketId(null);
+                  setActiveTab(tab);
+                  setIsMobileMenuOpen(false);
+                }}
+                onCloseMobile={() => setIsMobileMenuOpen(false)}
+                isMobileDrawer
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-1 print:block overflow-hidden">
+        {/* Desktop Sidebar (hidden on mobile) */}
+        <div className="hidden md:flex shrink-0">
+          <Sidebar
+            activeTab={selectedTicketId ? 'detail' : safeActiveTab}
+            onTabChange={(tab) => {
+              setSelectedTicketId(null);
+              setActiveTab(tab);
+            }}
+          />
+        </div>
+
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-0 print:overflow-visible print:h-auto print:block print:p-0">
           {selectedTicketId ? (
             <TicketDetailPage
               ticketId={selectedTicketId}
@@ -174,11 +231,13 @@ const MainLayout: React.FC = () => {
 
 export function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <MainLayout />
-      </AuthProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <MainLayout />
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 
