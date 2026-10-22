@@ -351,7 +351,8 @@ export const AdminCatalogPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
@@ -505,6 +506,125 @@ export const AdminCatalogPage: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards View (eliminates horizontal scrolling on mobile) */}
+        <div className="block lg:hidden p-3.5 space-y-3 bg-slate-50/60">
+          {loading ? (
+            <div className="py-8 text-center text-slate-400 text-xs">
+              Cargando catálogo de servicios...
+            </div>
+          ) : categories.filter((c) => activeModuleFilter === 'ALL' || c.modulo === activeModuleFilter).length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs">
+              No hay servicios registrados en este módulo.
+            </div>
+          ) : (
+            categories
+              .filter((c) => activeModuleFilter === 'ALL' || c.modulo === activeModuleFilter)
+              .map((c, index, arr) => {
+                const IconComponent = getServiceIconComponent(c.icono);
+                return (
+                  <div key={c.id} className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs space-y-3">
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                          <IconComponent className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 text-sm leading-tight truncate">{c.nombre}</h4>
+                          <span className="font-mono text-[10px] text-slate-400 block truncate">{c.codigo}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1 shrink-0">
+                        {c.activo ? (
+                          <span className="px-2 py-0.5 text-[10px] font-extrabold text-emerald-800 bg-emerald-100 rounded-full border border-emerald-300">
+                            ACTIVO
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-[10px] font-extrabold text-slate-600 bg-slate-100 rounded-full border border-slate-300">
+                            INACTIVO
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {c.descripcion && (
+                      <p className="text-xs text-slate-600 line-clamp-2">{c.descripcion}</p>
+                    )}
+
+                    <div className="bg-slate-50 rounded-xl p-2.5 space-y-1.5 text-xs text-slate-600 border border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[11px]">Módulo:</span>
+                        <span className={`px-2 py-0.5 text-[10px] font-black rounded-lg border ${
+                          c.modulo === 'SERVICIOS_GENERALES'
+                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                        }`}>
+                          {c.modulo === 'SERVICIOS_GENERALES' ? '🏗️ Servicios Generales' : '💻 OTIC'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[11px]">SLAs Ref:</span>
+                        <span className="font-semibold text-slate-700 text-[11px]">
+                          Resp: {c.sla_horas_respuesta}h • Resol: {c.sla_horas_resolucion}h
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 text-[11px]">Especialista Defecto:</span>
+                        <span className="font-medium text-slate-800 text-[11px] truncate max-w-[180px]">
+                          {c.tecnico_defecto_nombre || 'Mesa de Ayuda (Manual)'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                      <div className="flex items-center space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveOrder(index, 'up')}
+                          disabled={index === 0 || reordering}
+                          className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                          title="Subir posición"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveOrder(index, 'down')}
+                          disabled={index === arr.length - 1 || reordering}
+                          className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                          title="Bajar posición"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[10px] font-mono text-slate-400 ml-1">Pos: {c.orden ?? index + 1}</span>
+                      </div>
+
+                      <div className="flex items-center space-x-1.5">
+                        <button
+                          onClick={() => handleOpenEditModal(c)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold border border-slate-300 transition-colors flex items-center space-x-1 cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>Editar</span>
+                        </button>
+                        {c.activo && (
+                          <button
+                            onClick={() => handleDeleteCategory(c)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-200 transition-colors cursor-pointer"
+                            title="Desactivar Servicio"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+          )}
         </div>
       </div>
 

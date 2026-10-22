@@ -693,7 +693,7 @@ export const SGInventoryPage: React.FC = () => {
         </div>
 
         {/* Pestañas de Talleres */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100 scrollbar-thin">
+        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 pt-1 border-t border-slate-100 no-scrollbar">
           {TALLERES_CATEGORIAS.map((t) => {
             const Icon = t.icon;
             const isSelected = selectedTaller === t.id;
