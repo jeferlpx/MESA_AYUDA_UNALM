@@ -469,4 +469,206 @@ export class EmailService {
       html: htmlSolicitante,
     });
   }
+
+  // ===========================================================================
+  // 6. SOLICITUD DE CREACIÓN DE USUARIO EN DIRECTORIO ACTIVO (ÁREA DE REDES)
+  // ===========================================================================
+  static async notificarSolicitudCreacionUsuarioAD(data: {
+    nombreCompleto: string;
+    dni: string;
+    condicion: string;
+    email: string;
+    facultadDependencia: string;
+    celular: string;
+    anexo?: string;
+  }): Promise<void> {
+    const destinoRedes = 'redes@lamolina.edu.pe';
+    const fechaHora = new Date().toLocaleString('es-PE', {
+      timeZone: 'America/Lima',
+      dateStyle: 'full',
+      timeStyle: 'medium',
+    });
+
+    const htmlRedes = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 640px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);">
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 50%, #0284c7 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
+              <span style="background-color: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; display: inline-block; margin-bottom: 8px;">
+                Directorio Activo • Gestión de Identidades UNALM
+              </span>
+              <h1 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">
+                Solicitud de Alta de Usuario en Dominio
+              </h1>
+              <p style="margin: 6px 0 0 0; font-size: 12px; opacity: 0.95; font-weight: 500;">
+                Mesa de Ayuda OTIC — Universidad Nacional Agraria La Molina
+              </p>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 32px 28px;">
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #166534; font-weight: 600;">
+                  📌 Estimado equipo de <strong>Redes y Telecomunicaciones (OTIC)</strong>:
+                </p>
+                <p style="margin: 4px 0 0 0; font-size: 12px; line-height: 1.6; color: #15803d;">
+                  Se ha recibido una nueva solicitud de registro institucional mediante el portal de Mesa de Ayuda para la creación y habilitación de cuenta de usuario en el <strong>Directorio Activo (LDAP UNALM)</strong>.
+                </p>
+              </div>
+
+              <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">
+                📋 Ficha Técnica del Solicitante
+              </h3>
+
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse: separate; border-spacing: 0; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-bottom: 24px;">
+                <tr style="background-color: #f8fafc;">
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; width: 38%; border-bottom: 1px solid #e2e8f0;">
+                    Nombres y Apellidos Completos:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 13px; font-weight: 800; color: #0f172a; border-bottom: 1px solid #e2e8f0;">
+                    ${data.nombreCompleto}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                    DNI / Documento de Identidad:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 13px; font-weight: 800; color: #0f172a; font-family: monospace; border-bottom: 1px solid #e2e8f0;">
+                    ${data.dni}
+                  </td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                    Condición de Contrato / Vínculo:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #0369a1; border-bottom: 1px solid #e2e8f0;">
+                    <span style="background-color: #e0f2fe; padding: 3px 10px; border-radius: 12px; border: 1px solid #bae6fd;">
+                      ${data.condicion}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                    Correo Institucional UNALM:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 13px; font-weight: 700; color: #15803d; font-family: monospace; border-bottom: 1px solid #e2e8f0;">
+                    ${data.email}
+                  </td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                    Facultad, Dependencia u Orgánica:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 13px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0;">
+                    ${data.facultadDependencia}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                    Celular de Contacto:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 13px; font-weight: 800; color: #0f172a; border-bottom: 1px solid #e2e8f0;">
+                    📱 ${data.celular}
+                  </td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                    Anexo Telefónico:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 600; color: #334155; border-bottom: 1px solid #e2e8f0;">
+                    ${data.anexo ? `☎️ Anexo ${data.anexo}` : '— (No especificado)'}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 700; color: #475569;">
+                    Fecha y Hora de la Solicitud:
+                  </td>
+                  <td style="padding: 12px 16px; font-size: 12px; font-weight: 600; color: #64748b;">
+                    🕒 ${fechaHora}
+                  </td>
+                </tr>
+              </table>
+
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; font-size: 12px; color: #64748b; line-height: 1.5;">
+                <strong style="color: #0f172a;">Próximo paso técnico:</strong> Proceder a la creación de la cuenta en el Controlador de Dominio (OU correspondiente según la dependencia informada) y notificar los accesos iniciales al usuario solicitante a su correo institucional o de contacto.
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; padding: 20px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b;">
+              <p style="margin: 0; font-weight: 700; color: #334155;">Oficina de Tecnologías de la Información y Comunicación (OTIC)</p>
+              <p style="margin: 4px 0 0 0;">Universidad Nacional Agraria La Molina • Mesa de Ayuda In-House</p>
+              <p style="margin: 8px 0 0 0; font-size: 10px; color: #94a3b8;">Notificación automática del Sistema de Mesa de Ayuda UNALM generada por solicitud web pública.</p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    // 1. Envío al correo oficial de Redes
+    await this.sendMail({
+      to: destinoRedes,
+      subject: `🔔 [SOLICITUD DE ALTA AD] ${data.nombreCompleto} - DNI ${data.dni} (${data.condicion})`,
+      html: htmlRedes,
+    });
+
+    // 2. Envío de confirmación formal al usuario solicitante
+    if (data.email && data.email.includes('@')) {
+      const htmlUsuario = this.renderEmailTemplate({
+        headerTitle: 'Hemos recibido tu Solicitud de Registro en Directorio Activo',
+        headerSubtitle: 'Confirmación de Solicitud de Cuenta UNALM',
+        contentHtml: `
+          <p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 0 0 16px 0;">
+            Estimado(a) <strong>${data.nombreCompleto}</strong>:
+          </p>
+          <p style="font-size: 13px; line-height: 1.6; color: #334155; margin: 0 0 16px 0;">
+            Tu solicitud de registro para la creación de cuenta en el <strong>Directorio Activo de la UNALM</strong> ha sido enviada exitosamente al Área de <strong>Redes y Telecomunicaciones (${destinoRedes})</strong>.
+          </p>
+
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <table width="100%" style="font-size: 12px;">
+              <tr>
+                <td style="color: #64748b; padding-bottom: 4px; width: 40%;">DNI:</td>
+                <td style="font-weight: 700; color: #0f172a;">${data.dni}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding-bottom: 4px;">Condición:</td>
+                <td style="font-weight: 700; color: #0f172a;">${data.condicion}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding-bottom: 4px;">Dependencia:</td>
+                <td style="font-weight: 700; color: #0f172a;">${data.facultadDependencia}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b;">Celular:</td>
+                <td style="font-weight: 700; color: #0f172a;">${data.celular}</td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="font-size: 12px; color: #64748b; line-height: 1.6; margin: 0;">
+            El equipo técnico validará tu información y te remitirá tus credenciales y contraseña de acceso institucional por este medio. Una vez creada tu cuenta en el Directorio Activo, podrás ingresar a la Mesa de Ayuda directamente con tu usuario y contraseña institucional.
+          </p>
+        `,
+      });
+
+      await this.sendMail({
+        to: data.email,
+        subject: `📨 Confirmación de Solicitud de Cuenta en Directorio Activo - Mesa de Ayuda UNALM`,
+        html: htmlUsuario,
+      });
+    }
+  }
 }

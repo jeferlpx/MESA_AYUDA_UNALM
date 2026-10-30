@@ -8,6 +8,7 @@ router.post('/login', AuthController.login);
 router.post('/ldap-login', AuthController.ldapLogin);
 router.get('/ldap-status', AuthController.ldapStatus);
 router.post('/register', AuthController.register);
+router.post('/solicitar-cuenta', AuthController.solicitarCuenta);
 router.get('/me', authenticateJWT, AuthController.me);
 router.post('/complete-first-login', authenticateJWT, AuthController.completeFirstLogin);
 

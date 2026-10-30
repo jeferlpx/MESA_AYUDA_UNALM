@@ -121,6 +121,22 @@ export async function runDatabaseMigrations(): Promise<void> {
       `);
     } catch (e) {}
 
+    // 5.1 Tabla para Solicitudes de Alta de Cuenta en Directorio Activo (Redes)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS solicitudes_cuenta_ad (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre_completo VARCHAR(255) NOT NULL,
+        dni VARCHAR(20) NOT NULL,
+        condicion VARCHAR(100) NOT NULL,
+        email VARCHAR(150) NOT NULL,
+        facultad_dependencia VARCHAR(255) NOT NULL,
+        celular VARCHAR(30) NOT NULL,
+        anexo VARCHAR(20) NULL,
+        estado ENUM('PENDIENTE', 'CREADO', 'RECHAZADO') NOT NULL DEFAULT 'PENDIENTE',
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // 6. Asegurar tabla encuestas_satisfaccion
     await connection.query(`
       CREATE TABLE IF NOT EXISTS encuestas_satisfaccion (

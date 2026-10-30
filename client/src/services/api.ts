@@ -104,6 +104,15 @@ export const api = {
     apiFetch('/auth/ldap-status'),
   register: (data: { nombres?: string; apellidos?: string; nombreCompleto?: string; email: string; password: string; facultadDependencia: string; telefono?: string; anexo?: string }) => 
     apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  solicitarCuenta: (data: {
+    nombreCompleto: string;
+    dni: string;
+    condicion: string;
+    email: string;
+    facultadDependencia: string;
+    celular: string;
+    anexo?: string;
+  }) => apiFetch('/auth/solicitar-cuenta', { method: 'POST', body: JSON.stringify(data) }),
   getProfile: () => 
     apiFetch('/auth/me'),
   completeFirstLogin: (data: {

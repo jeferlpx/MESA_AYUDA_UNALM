@@ -8,6 +8,7 @@ import { UserTokenPayload } from '../types';
 import { validatePeruvianPhone } from '../utils/phoneValidator';
 import { LdapService } from '../services/ldap.service';
 import { dbPool } from '../config/db';
+import { EmailService } from '../services/email.service';
 
 export class AuthController {
   static async login(req: Request, res: Response) {
@@ -596,6 +597,90 @@ export class AuthController {
       return res.status(500).json({
         success: false,
         message: 'Error al procesar el registro de usuario',
+      });
+    }
+  }
+
+  static async solicitarCuenta(req: Request, res: Response) {
+    try {
+      const {
+        nombreCompleto,
+        dni,
+        condicion,
+        email,
+        facultadDependencia,
+        celular,
+        anexo,
+      } = req.body;
+
+      if (!nombreCompleto || !nombreCompleto.trim()) {
+        return res.status(400).json({ success: false, message: 'El nombre y apellidos completos es obligatorio' });
+      }
+
+      if (!dni || !/^\d{8}$/.test(dni.trim())) {
+        return res.status(400).json({ success: false, message: 'El DNI debe tener exactamente 8 dígitos numéricos' });
+      }
+
+      if (!condicion || !condicion.trim()) {
+        return res.status(400).json({ success: false, message: 'La condición de contrato o vinculación es obligatoria' });
+      }
+
+      if (!email || !email.trim() || !email.includes('@')) {
+        return res.status(400).json({ success: false, message: 'Debe ingresar un correo válido de contacto o institucional' });
+      }
+
+      if (!facultadDependencia || !facultadDependencia.trim()) {
+        return res.status(400).json({ success: false, message: 'La facultad, dependencia o unidad orgánica es obligatoria' });
+      }
+
+      if (!celular || !celular.trim()) {
+        return res.status(400).json({ success: false, message: 'El número de celular es obligatorio para el contacto' });
+      }
+
+      const cleanCelular = celular.replace(/\D/g, '');
+      if (cleanCelular.length < 9) {
+        return res.status(400).json({ success: false, message: 'El número de celular debe tener 9 dígitos' });
+      }
+
+      // 1. Guardar registro en base de datos para trazabilidad
+      try {
+        await dbPool.query(
+          `INSERT INTO solicitudes_cuenta_ad (nombre_completo, dni, condicion, email, facultad_dependencia, celular, anexo)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            nombreCompleto.trim(),
+            dni.trim(),
+            condicion.trim(),
+            email.trim().toLowerCase(),
+            facultadDependencia.trim(),
+            celular.trim(),
+            anexo && anexo.trim() ? anexo.trim() : null,
+          ]
+        );
+      } catch (dbErr: any) {
+        console.warn('[DB Warning al registrar solicitud_cuenta_ad]:', dbErr.message);
+      }
+
+      // 2. Enviar correo automático formal a redes@lamolina.edu.pe y al solicitante
+      await EmailService.notificarSolicitudCreacionUsuarioAD({
+        nombreCompleto: nombreCompleto.trim(),
+        dni: dni.trim(),
+        condicion: condicion.trim(),
+        email: email.trim().toLowerCase(),
+        facultadDependencia: facultadDependencia.trim(),
+        celular: celular.trim(),
+        anexo: anexo && anexo.trim() ? anexo.trim() : undefined,
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Su solicitud ha sido enviada con éxito al Área de Redes y Telecomunicaciones (redes@lamolina.edu.pe). Recibirá sus credenciales de acceso institucional en su correo una vez creada su cuenta.',
+      });
+    } catch (error: any) {
+      console.error('[AuthController.solicitarCuenta error]:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error al procesar la solicitud de cuenta',
       });
     }
   }

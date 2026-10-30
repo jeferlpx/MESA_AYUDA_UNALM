@@ -492,3 +492,4 @@ export const AdminEquipmentPage: React.FC<AdminEquipmentPageProps> = ({ onSelect
     </div>
   );
 };
+
