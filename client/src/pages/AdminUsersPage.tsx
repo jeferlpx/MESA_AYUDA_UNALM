@@ -894,7 +894,7 @@ export const AdminUsersPage: React.FC = () => {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-slate-700">Celular</label>
+                <label className="block text-xs font-semibold text-slate-700">Celular *</label>
                 <span className="text-[10px] text-slate-400">9 dígitos (MTC)</span>
               </div>
               <div className="relative">
@@ -928,7 +928,7 @@ export const AdminUsersPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Anexo</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Anexo Telefónico *</label>
               <input
                 type="text"
                 value={formAnexo}

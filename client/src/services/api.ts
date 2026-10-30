@@ -180,6 +180,14 @@ export const api = {
     apiFetch(`/tickets/${id}`),
   getEquipmentHistory: (numeroInventario: string) =>
     apiFetch(`/tickets/inventory/${encodeURIComponent(numeroInventario.trim())}`),
+  getEquipmentSummary: (filters?: { search?: string; modulo?: string; estado?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.modulo && filters.modulo !== 'ALL') params.append('modulo', filters.modulo);
+    if (filters?.estado && filters.estado !== 'ALL') params.append('estado', filters.estado);
+    const qs = params.toString();
+    return apiFetch(`/tickets/equipment/summary${qs ? `?${qs}` : ''}`);
+  },
   createTicket: (formData: FormData) => 
     apiFetch('/tickets', { method: 'POST', body: formData }),
   updateStatus: (

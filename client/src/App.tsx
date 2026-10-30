@@ -15,6 +15,7 @@ import { InfrastructureInspectionsPage } from './pages/InfrastructureInspections
 import { SGWorkOrdersHistoryPage } from './pages/SGWorkOrdersHistoryPage';
 import { SGInventoryPage } from './pages/SGInventoryPage';
 import { SGDashboardPage } from './pages/SGDashboardPage';
+import { AdminEquipmentPage } from './pages/AdminEquipmentPage';
 import { TicketDetailPage } from './pages/TicketDetailPage';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 import { X } from 'lucide-react';
@@ -82,11 +83,11 @@ const MainLayout: React.FC = () => {
       return activeTab;
     }
     if (user.rol === 'MESA_AYUDA_SG') {
-      const allowed = ['sg-dashboard', 'specialist', 'tech-attended', 'sg-work-orders', 'sg-inventory', 'infrastructure-inspections', 'catalog', 'my-tickets', 'pending-surveys'];
+      const allowed = ['sg-dashboard', 'specialist', 'tech-attended', 'sg-work-orders', 'sg-inventory', 'infrastructure-inspections', 'admin-equipment', 'catalog', 'my-tickets', 'pending-surveys'];
       return allowed.includes(activeTab) ? activeTab : 'sg-dashboard';
     }
     if (['MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol)) {
-      const allowed = ['specialist', 'tech-attended', 'infrastructure-inspections', 'catalog', 'my-tickets', 'pending-surveys'];
+      const allowed = ['specialist', 'tech-attended', 'infrastructure-inspections', 'admin-equipment', 'catalog', 'my-tickets', 'pending-surveys'];
       return allowed.includes(activeTab) ? activeTab : 'specialist';
     }
     // SOLICITANTE
@@ -235,6 +236,8 @@ const MainLayout: React.FC = () => {
             <AdminUsersPage />
           ) : safeActiveTab === 'admin-catalog' ? (
             <AdminCatalogPage />
+          ) : safeActiveTab === 'admin-equipment' ? (
+            <AdminEquipmentPage onSelectTicketDetail={handleSelectTicketDetail} />
           ) : safeActiveTab === 'infrastructure-inspections' ? (
             <InfrastructureInspectionsPage onSelectTicketDetail={handleSelectTicketDetail} />
           ) : safeActiveTab === 'sg-dashboard' ? (

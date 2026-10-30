@@ -198,6 +198,25 @@ export class TicketController {
     }
   }
 
+  static async getEquipmentSummary(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) return res.status(401).json({ success: false, message: 'No autenticado' });
+
+      const search = (req.query.search as string) || '';
+      const modulo = (req.query.modulo as string) || '';
+      const estado = (req.query.estado as string) || '';
+
+      const items = await TicketModel.getEquipmentSummary({ search, modulo, estado });
+      return res.json({
+        success: true,
+        data: items,
+      });
+    } catch (error: any) {
+      console.error('[getEquipmentSummary Error]:', error);
+      return res.status(500).json({ success: false, message: 'Error al consultar resumen de bienes institucionales' });
+    }
+  }
+
   static async createTicket(req: AuthenticatedRequest, res: Response) {
     try {
       if (!req.user) return res.status(401).json({ success: false, message: 'No autenticado' });

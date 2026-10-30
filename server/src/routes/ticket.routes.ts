@@ -20,6 +20,7 @@ const handleFlexibleUpload = (req: Request, res: Response, next: NextFunction) =
 };
 
 router.get('/', TicketController.listTickets);
+router.get('/equipment/summary', TicketController.getEquipmentSummary);
 router.get('/inventory/:inventoryNumber', TicketController.getEquipmentHistory);
 router.get('/:id', TicketController.getTicketDetail);
 router.post('/', handleFlexibleUpload, TicketController.createTicket);

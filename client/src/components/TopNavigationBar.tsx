@@ -158,16 +158,17 @@ export const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
 
           {/* Right section: Contextual Actions */}
           <div className="flex items-center space-x-2 shrink-0">
-            {/* Quick Equipment History Lookup for Mesa de Ayuda & Admin */}
-            {isSpecialistOrAdmin && onOpenEquipmentLookup && (
+            {/* Quick Equipment History Lookup habilitado para todos los usuarios */}
+            {onOpenEquipmentLookup && (
               <button
                 type="button"
                 onClick={onOpenEquipmentLookup}
-                title="Consultar historial de atenciones por N° de Inventario del bien"
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                title="Consultar Historial de Bien Institucional • Módulo de consulta rápida de hoja de vida y atenciones técnicas por código patrimonial"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
               >
                 <Laptop className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span className="hidden sm:inline">Historial de Bien</span>
+                <span className="hidden sm:inline">Consultar Historial de Bien</span>
+                <span className="sm:hidden">Bien</span>
               </button>
             )}
 

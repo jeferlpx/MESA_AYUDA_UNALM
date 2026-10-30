@@ -7,7 +7,7 @@ const path = require('path');
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 async function syncLdapUsers() {
-  console.log('--- 1. Conectando con Active Directory (ldaps://172.16.0.8:636) ---');
+  console.log('--- 1. Conectando con Active Directory Institucional (UNALM) ---');
   const client = new Client({
     url: process.env.LDAP_URL || 'ldaps://172.16.0.8:636',
     timeout: 15000,
@@ -23,43 +23,134 @@ async function syncLdapUsers() {
   const res = await client.search(process.env.LDAP_BASE_DN || 'DC=lamolina,DC=edu,DC=pe', {
     scope: 'sub',
     filter: '(&(objectCategory=person)(objectClass=user))',
-    paged: { pageSize: 500 }
+    paged: { pageSize: 500 },
+    attributes: [
+      'dn',
+      'sAMAccountName',
+      'userPrincipalName',
+      'mail',
+      'displayName',
+      'givenName',
+      'sn',
+      'department',
+      'physicalDeliveryOfficeName',
+      'company',
+      'description',
+      'title',
+      'telephoneNumber',
+      'mobile',
+      'ipPhone',
+      'otherTelephone',
+      'homePhone',
+      'pager'
+    ]
   });
 
   await client.unbind();
   console.log(`✓ Total cuentas encontradas en Active Directory: ${res.searchEntries.length}`);
 
+  const getAttr = (val) => {
+    if (!val) return '';
+    if (Array.isArray(val)) {
+      return val.length > 0 ? (val[0] || '').toString().trim() : '';
+    }
+    return val.toString().trim();
+  };
+
   const adUsers = [];
   for (const entry of res.searchEntries) {
-    const sAM = entry.sAMAccountName ? String(entry.sAMAccountName).trim() : '';
+    const sAM = getAttr(entry.sAMAccountName);
     if (!sAM || ['Sysadmin', 'Invitado', 'krbtgt'].includes(sAM) || sAM.startsWith('$')) continue;
 
-    const upn = entry.userPrincipalName ? String(entry.userPrincipalName).trim() : (sAM + '@lamolina.edu.pe');
-    const mail = (entry.mail ? String(entry.mail).trim() : upn).toLowerCase();
-    const displayName = entry.displayName ? String(entry.displayName).trim() : (entry.cn ? String(entry.cn).trim() : sAM);
-    const givenName = entry.givenName ? String(entry.givenName).trim() : '';
-    const sn = entry.sn ? String(entry.sn).trim() : '';
-    const dn = entry.dn || '';
+    const upn = getAttr(entry.userPrincipalName) || `${sAM}@lamolina.edu.pe`;
+    const mail = (getAttr(entry.mail) || upn).toLowerCase();
+    const displayName = getAttr(entry.displayName) || getAttr(entry.cn) || sAM;
+    let givenName = getAttr(entry.givenName);
+    let sn = getAttr(entry.sn);
 
-    // Extraer jerarquía organizacional de las OU
-    const ouMatches = dn.match(/OU=([^,]+)/g);
-    const dependencia = ouMatches ? ouMatches.map(m => m.replace('OU=', '')).reverse().join(' - ') : 'UNALM';
-    const cargo = entry.description ? String(entry.description).trim() : (entry.title ? String(entry.title).trim() : 'Personal Institucional');
-    const telefono = entry.telephoneNumber ? String(entry.telephoneNumber).trim() : null;
+    if (!givenName && displayName) {
+      const parts = displayName.split(/\s+/);
+      givenName = parts.length > 1 ? parts.slice(0, -1).join(' ') : parts[0];
+      if (!sn && parts.length > 1) {
+        sn = parts[parts.length - 1];
+      }
+    }
+
+    if (!givenName) givenName = sAM;
+    if (!sn) sn = '-';
+
+    // 1. Extraer Facultad o Dependencia Institucional
+    let dependencia =
+      getAttr(entry.department) ||
+      getAttr(entry.physicalDeliveryOfficeName) ||
+      getAttr(entry.company);
+
+    if (!dependencia && entry.dn) {
+      const ouMatches = String(entry.dn).match(/OU=([^,]+)/g);
+      if (ouMatches && ouMatches.length > 0) {
+        const cleanedOUs = ouMatches
+          .map(m => m.replace('OU=', '').trim())
+          .filter(ou => ou !== 'UNALM' && ou !== 'UNALM Servicios');
+        dependencia = cleanedOUs.length > 0
+          ? cleanedOUs.reverse().join(' - ')
+          : ouMatches.map(m => m.replace('OU=', '').trim()).reverse().join(' - ');
+      }
+    }
+
+    if (!dependencia) {
+      dependencia = 'Comunidad Universitaria UNALM';
+    }
+
+    // 2. Extraer Cargo o Condición Laboral
+    const cargo = getAttr(entry.title) || getAttr(entry.description) || 'Personal Institucional';
+
+    // 3. Extraer Celular y Anexo Telefónico
+    const rawMobile = getAttr(entry.mobile);
+    const rawTel = getAttr(entry.telephoneNumber);
+    const rawIp = getAttr(entry.ipPhone);
+    const rawOther = getAttr(entry.otherTelephone);
+    const rawHome = getAttr(entry.homePhone);
+
+    let telefono = null;
+    let anexo = null;
+
+    const phoneCandidates = [rawMobile, rawTel, rawHome, rawIp].filter(Boolean);
+    for (const cand of phoneCandidates) {
+      const digits = cand.replace(/\D/g, '');
+      if (digits.length === 9 && digits.startsWith('9')) {
+        telefono = digits;
+        break;
+      } else if (!telefono && digits.length >= 7) {
+        telefono = cand;
+      }
+    }
+
+    if (rawOther && rawOther.replace(/\D/g, '').length >= 2 && rawOther.replace(/\D/g, '').length <= 6) {
+      anexo = rawOther.replace(/\D/g, '');
+    } else if (rawIp && rawIp.replace(/\D/g, '').length >= 2 && rawIp.replace(/\D/g, '').length <= 6) {
+      anexo = rawIp.replace(/\D/g, '');
+    } else if (rawTel) {
+      const extMatch = rawTel.match(/(?:ext|anx|anexo|#)\.?\s*(\d{2,6})/i);
+      if (extMatch) {
+        anexo = extMatch[1];
+      } else if (rawTel.replace(/\D/g, '').length >= 2 && rawTel.replace(/\D/g, '').length <= 5) {
+        anexo = rawTel.replace(/\D/g, '');
+      }
+    }
 
     adUsers.push({
       sAMAccountName: sAM,
       email: mail,
-      nombres: givenName || displayName,
-      apellidos: sn || '(UNALM)',
+      nombres: givenName,
+      apellidos: sn,
       facultadDependencia: dependencia,
       cargo,
-      telefono
+      telefono,
+      anexo
     });
   }
 
   console.log(`✓ Usuarios institucionales válidos mapeados desde AD: ${adUsers.length}`);
-  const adEmails = new Set(adUsers.map(u => u.email.toLowerCase()));
 
   // Conexión a Base de Datos
   console.log('--- 2. Conectando a Base de Datos MySQL Centralizada ---');
@@ -68,127 +159,119 @@ async function syncLdapUsers() {
     port: parseInt(process.env.DB_PORT || '3306', 10),
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD || process.env.DB_PASS,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    charset: 'utf8mb4'
   });
   console.log('✓ Conexión a Base de Datos establecida.');
 
-  // Obtener IDs de usuarios con referencias foráneas (tickets, logs, etc.)
-  const referencedTables = [
-    { table: 'tickets', col: 'solicitante_id' },
-    { table: 'tickets', col: 'tecnico_id' },
-    { table: 'adjuntos', col: 'subido_por_id' },
-    { table: 'categorias_servicio', col: 'tecnico_defecto_id' },
-    { table: 'comentarios_ticket', col: 'usuario_id' },
-    { table: 'logs_auditoria', col: 'usuario_id' },
-    { table: 'ticket_tecnicos', col: 'tecnico_id' }
-  ];
+  console.log('--- 3. Sincronización inteligente de usuarios (solo nuevos y campos modificados) ---');
+  const dummyPasswordHash = await bcrypt.hash('ActiveDirectoryAuthOnly2026!', 10);
+  let insertedAd = 0;
+  let updatedAd = 0;
+  let unchangedAd = 0;
 
-  const referencedIds = new Set();
-  for (const t of referencedTables) {
-    try {
-      const [rows] = await db.query(`SELECT DISTINCT ${t.col} as uid FROM ${t.table} WHERE ${t.col} IS NOT NULL`);
-      for (const r of rows) referencedIds.add(r.uid);
-    } catch (e) {
-      // Ignorar si la tabla no existe
-    }
-  }
-
-  console.log(`✓ IDs con historial en el sistema (protegidos contra eliminación): ${referencedIds.size}`);
-
-  // Cuentas de staff indispensables para administración y marcha blanca
-  const staffProtectedEmails = new Set([
-    'admin@lamolina.edu.pe',
-    'admin',
-    'admin.otic@lamolina.edu.pe',
-    'supervisor.otic@lamolina.edu.pe',
-    'soporte@lamolina.edu.pe',
-    'mesa.sg@lamolina.edu.pe',
-    'tecnico.redes@lamolina.edu.pe',
-    'tecnico.electricidad@lamolina.edu.pe'
-  ]);
-
-  // 3. Eliminar usuarios de prueba que NO están en AD y NO tienen tickets
-  console.log('--- 3. Depuración de usuarios de prueba pre-registrados ---');
-  const [currentUsers] = await db.query('SELECT id, email, rol_id FROM usuarios');
-  let deletedCount = 0;
-  let inactivedCount = 0;
-
-  for (const cu of currentUsers) {
-    const emailLower = (cu.email || '').toLowerCase();
-    const isAdUser = adEmails.has(emailLower);
-    const isStaff = staffProtectedEmails.has(emailLower) || cu.id === 1 || (cu.rol_id && cu.rol_id !== 4);
-    const isReferenced = referencedIds.has(cu.id);
-
-    // Cuentas de administración y staff siempre activas
-    if (isStaff) {
-      await db.query("UPDATE usuarios SET estado = 'ACTIVO' WHERE id = ?", [cu.id]);
-      continue;
+  for (const adU of adUsers) {
+    const candidateEmails = [adU.email];
+    if (adU.email.includes('@')) {
+      candidateEmails.push(adU.email.split('@')[0]);
+    } else {
+      candidateEmails.push(`${adU.email}@lamolina.edu.pe`);
     }
 
-    if (!isAdUser) {
-      if (!isReferenced) {
-        await db.query('DELETE FROM usuarios WHERE id = ?', [cu.id]);
-        deletedCount++;
+    const [existing] = await db.query(
+      'SELECT id, nombres, apellidos, email, rol_id, facultad_dependencia, cargo, telefono, anexo, estado FROM usuarios WHERE email IN (?) LIMIT 1',
+      [candidateEmails]
+    );
+
+    if (existing.length === 0) {
+      // 1. Usuario NUEVO en AD que no existe en el sistema -> Agregar como Solicitante
+      let initialRolId = 4; // Solicitante
+      if (adU.email === 'soporte@lamolina.edu.pe') initialRolId = 5;
+      if (adU.email === 'daynacc@lamolina.edu.pe') initialRolId = 3;
+
+      await db.query(
+        `INSERT INTO usuarios (nombres, apellidos, email, password_hash, rol_id, facultad_dependencia, cargo, telefono, anexo, estado)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')`,
+        [
+          adU.nombres,
+          adU.apellidos,
+          adU.email,
+          dummyPasswordHash,
+          initialRolId,
+          adU.facultadDependencia,
+          adU.cargo,
+          adU.telefono || null,
+          adU.anexo || null
+        ]
+      );
+      insertedAd++;
+    } else {
+      // 2. Usuario YA EXISTE -> Solo modificar si hay datos nuevos/cambios en AD que no coincidan con la BD actual
+      const current = existing[0];
+      const updates = [];
+      const values = [];
+
+      // Verificar Facultad o Dependencia: si AD tiene dato y es distinto de lo que hay en BD
+      const currentDep = (current.facultad_dependencia || '').trim();
+      if (adU.facultadDependencia && adU.facultadDependencia.trim() !== currentDep) {
+        // Si el actual es genérico o difiere del de AD, actualizar
+        updates.push('facultad_dependencia = ?');
+        values.push(adU.facultadDependencia.trim());
+      }
+
+      // Verificar Cargo: si AD tiene cargo específico y difiere del actual
+      const currentCargo = (current.cargo || '').trim();
+      if (adU.cargo && adU.cargo.trim() !== currentCargo) {
+        updates.push('cargo = ?');
+        values.push(adU.cargo.trim());
+      }
+
+      // Verificar Celular: si AD tiene celular y difiere del actual (o el actual está vacío)
+      const currentTel = (current.telefono || '').trim();
+      if (adU.telefono && adU.telefono.trim() !== currentTel) {
+        updates.push('telefono = ?');
+        values.push(adU.telefono.trim());
+      }
+
+      // Verificar Anexo: si AD tiene anexo y difiere del actual (o el actual está vacío)
+      const currentAnx = (current.anexo || '').trim();
+      if (adU.anexo && adU.anexo.trim() !== currentAnx) {
+        updates.push('anexo = ?');
+        values.push(adU.anexo.trim());
+      }
+
+      // Si nombres o apellidos cambiaron en AD respecto a la BD
+      if (adU.nombres && adU.nombres.trim() !== (current.nombres || '').trim()) {
+        updates.push('nombres = ?');
+        values.push(adU.nombres.trim());
+      }
+      if (adU.apellidos && adU.apellidos !== '-' && adU.apellidos.trim() !== (current.apellidos || '').trim()) {
+        updates.push('apellidos = ?');
+        values.push(adU.apellidos.trim());
+      }
+
+      if (updates.length > 0) {
+        values.push(current.id);
+        await db.query(`UPDATE usuarios SET ${updates.join(', ')} WHERE id = ?`, values);
+        updatedAd++;
       } else {
-        await db.query("UPDATE usuarios SET estado = 'INACTIVO' WHERE id = ?", [cu.id]);
-        inactivedCount++;
+        unchangedAd++;
       }
     }
   }
 
-  console.log(`✓ Usuarios de prueba eliminados definitivamente: ${deletedCount}`);
-  console.log(`✓ Usuarios con tickets conservados pero dados de baja (INACTIVO): ${inactivedCount}`);
-
-  // 4. Importar o actualizar usuarios de Active Directory
-  console.log('--- 4. Importando usuarios oficiales desde Active Directory ---');
-  const dummyPasswordHash = await bcrypt.hash('ActiveDirectoryAuthOnly2026!', 10);
-  let insertedAd = 0;
-  let updatedAd = 0;
-
-  for (const adU of adUsers) {
-    const [existing] = await db.query('SELECT id, rol_id FROM usuarios WHERE email = ?', [adU.email]);
-
-    let rolId = 4; // Rol Solicitante por defecto
-    if (adU.email === 'soporte@lamolina.edu.pe') {
-      rolId = 5; // Mesa de Ayuda OTIC
-    } else if (adU.email === 'daynacc@lamolina.edu.pe') {
-      rolId = 3; // Técnico Redes
-    }
-
-    if (existing.length > 0) {
-      // Si ya existía, preservar rol si era un rol de staff
-      const finalRol = existing[0].rol_id !== 4 ? existing[0].rol_id : rolId;
-      await db.query(`
-        UPDATE usuarios 
-        SET nombres = ?, apellidos = ?, facultad_dependencia = ?, cargo = ?, telefono = COALESCE(?, telefono), rol_id = ?, estado = 'ACTIVO'
-        WHERE id = ?
-      `, [adU.nombres, adU.apellidos, adU.facultadDependencia, adU.cargo, adU.telefono, finalRol, existing[0].id]);
-      updatedAd++;
-    } else {
-      await db.query(`
-        INSERT INTO usuarios (nombres, apellidos, email, password_hash, rol_id, facultad_dependencia, cargo, telefono, estado)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')
-      `, [adU.nombres, adU.apellidos, adU.email, dummyPasswordHash, rolId, adU.facultadDependencia, adU.cargo, adU.telefono]);
-      insertedAd++;
-    }
-  }
-
-  console.log(`✓ Usuarios de AD insertados nuevos: ${insertedAd}`);
-  console.log(`✓ Usuarios de AD actualizados: ${updatedAd}`);
-
-  // 5. Verificación final
+  // 4. Verificación final
   const [finalTotal] = await db.query('SELECT COUNT(*) as c FROM usuarios');
   const [finalActive] = await db.query("SELECT COUNT(*) as c FROM usuarios WHERE estado = 'ACTIVO'");
-  const [finalInactive] = await db.query("SELECT COUNT(*) as c FROM usuarios WHERE estado = 'INACTIVO'");
-  const [czac] = await db.query('SELECT id, nombres, apellidos, email, rol_id, estado FROM usuarios WHERE email LIKE ?', ['%czacarias%']);
 
   console.log('\n=============================================');
-  console.log('🎉 SINCRONIZACIÓN CON DIRECTORIO ACTIVO COMPLETADA');
+  console.log('🎉 SINCRONIZACIÓN INTELIGENTE CON DIRECTORIO ACTIVO');
   console.log('=============================================');
-  console.log(`Total usuarios en BD: ${finalTotal[0].c}`);
-  console.log(`Total ACTIVOS (Directorio Activo + Staff): ${finalActive[0].c}`);
-  console.log(`Total INACTIVOS (solo históricos con tickets): ${finalInactive[0].c}`);
-  console.log('Christian Zacarías (Admin):', czac[0]);
+  console.log(`Cuentas procesadas desde AD: ${adUsers.length}`);
+  console.log(`✓ Nuevos usuarios institucionales agregados: ${insertedAd}`);
+  console.log(`✓ Usuarios actualizados con nuevos campos de AD: ${updatedAd}`);
+  console.log(`✓ Usuarios ya sincronizados (sin cambios): ${unchangedAd}`);
+  console.log(`Total usuarios en el sistema: ${finalTotal[0].c} (${finalActive[0].c} activos)`);
   console.log('=============================================\n');
 
   await db.end();

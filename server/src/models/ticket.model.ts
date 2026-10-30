@@ -387,6 +387,58 @@ export class TicketModel {
     return rows as TicketDB[];
   }
 
+  static async getEquipmentSummary(filters?: { search?: string; modulo?: string; estado?: string }): Promise<any[]> {
+    let sql = `
+      SELECT 
+        t.numero_inventario,
+        COUNT(t.id) as total_tickets,
+        SUM(CASE WHEN t.estado IN ('RESUELTO', 'CERRADO') THEN 1 ELSE 0 END) as tickets_resueltos,
+        SUM(CASE WHEN t.estado IN ('REPORTADO', 'ASIGNADO', 'EN_PROCESO', 'OBSERVADO') THEN 1 ELSE 0 END) as tickets_activos,
+        MAX(t.fecha_apertura) as ultima_atencion,
+        SUBSTRING_INDEX(GROUP_CONCAT(t.codigo_correlativo ORDER BY t.fecha_apertura DESC), ',', 1) as ultimo_ticket_codigo,
+        CAST(SUBSTRING_INDEX(GROUP_CONCAT(t.id ORDER BY t.fecha_apertura DESC), ',', 1) AS UNSIGNED) as ultimo_ticket_id,
+        SUBSTRING_INDEX(GROUP_CONCAT(t.estado ORDER BY t.fecha_apertura DESC), ',', 1) as ultimo_ticket_estado,
+        SUBSTRING_INDEX(GROUP_CONCAT(t.titulo ORDER BY t.fecha_apertura DESC SEPARATOR ' || '), ' || ', 1) as ultimo_ticket_titulo,
+        SUBSTRING_INDEX(GROUP_CONCAT(sol.facultad_dependencia ORDER BY t.fecha_apertura DESC SEPARATOR ' || '), ' || ', 1) as ultima_dependencia,
+        SUBSTRING_INDEX(GROUP_CONCAT(CONCAT(sol.nombres, ' ', sol.apellidos) ORDER BY t.fecha_apertura DESC SEPARATOR ' || '), ' || ', 1) as ultimo_solicitante,
+        SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(CONCAT(tec.nombres, ' ', tec.apellidos), 'Sin asignar') ORDER BY t.fecha_apertura DESC SEPARATOR ' || '), ' || ', 1) as ultimo_tecnico,
+        SUBSTRING_INDEX(GROUP_CONCAT(cat.nombre ORDER BY t.fecha_apertura DESC SEPARATOR ' || '), ' || ', 1) as ultima_categoria,
+        SUBSTRING_INDEX(GROUP_CONCAT(t.modulo ORDER BY t.fecha_apertura DESC), ',', 1) as ultimo_modulo
+      FROM tickets t
+      INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+      LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+      INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
+      WHERE t.numero_inventario IS NOT NULL AND TRIM(t.numero_inventario) != ''
+    `;
+
+    const params: any[] = [];
+
+    if (filters?.modulo && filters.modulo !== 'ALL') {
+      sql += ` AND t.modulo = ?`;
+      params.push(filters.modulo);
+    }
+
+    if (filters?.search && filters.search.trim() !== '') {
+      const q = `%${filters.search.trim()}%`;
+      sql += ` AND (t.numero_inventario LIKE ? OR t.titulo LIKE ? OR sol.facultad_dependencia LIKE ? OR sol.nombres LIKE ? OR sol.apellidos LIKE ? OR cat.nombre LIKE ?)`;
+      params.push(q, q, q, q, q, q);
+    }
+
+    sql += ` GROUP BY t.numero_inventario ORDER BY ultima_atencion DESC`;
+
+    const [rows] = await dbPool.query<RowDataPacket[]>(sql, params);
+
+    if (filters?.estado && filters.estado !== 'ALL') {
+      if (filters.estado === 'ACTIVO') {
+        return (rows as any[]).filter(r => Number(r.tickets_activos) > 0);
+      } else if (filters.estado === 'RESUELTO') {
+        return (rows as any[]).filter(r => Number(r.tickets_activos) === 0);
+      }
+    }
+
+    return rows as any[];
+  }
+
   static async updateTicketStatus(
     ticketId: number,
     nuevoEstado: TicketStatus,

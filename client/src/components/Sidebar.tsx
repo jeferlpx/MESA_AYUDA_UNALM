@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   Package,
   Star,
+  Laptop,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -285,6 +286,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
               <span>Catálogo de Servicios</span>
+            </button>
+          )}
+
+          {/* 9. Módulo de Bienes y Equipos Institucionales (Admin & Supervisores) */}
+          {isAdmin && (
+            <button
+              onClick={() => handleTabClick('admin-equipment')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                activeTab === 'admin-equipment'
+                  ? 'bg-blue-600 text-white shadow-md font-bold'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Laptop className="w-4 h-4 text-blue-400 shrink-0" />
+              <span>Bienes Institucionales</span>
             </button>
           )}
         </nav>

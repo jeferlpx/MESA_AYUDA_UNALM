@@ -78,8 +78,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
                     <span className="text-sm font-bold text-white group-hover:text-amber-200 transition-colors">
                       {user.nombres} {user.apellidos}
                     </span>
-                    <span className="text-[11px] text-unalm-200 dark:text-slate-400 truncate max-w-[220px]">
-                      {user.facultadDependencia} •{' '}
+                    <span
+                      className="text-[11px] text-unalm-200 dark:text-slate-400 truncate max-w-[260px] lg:max-w-[340px] block"
+                      title={`${user.facultadDependencia || 'UNALM'} (${user.rol === 'MESA_AYUDA' ? 'MESA DE AYUDA' : user.rol})`}
+                    >
+                      {user.facultadDependencia || 'Comunidad Universitaria UNALM'} •{' '}
                       <span className="uppercase font-extrabold text-amber-300">
                         {user.rol === 'MESA_AYUDA' ? 'MESA DE AYUDA' : user.rol}
                       </span>

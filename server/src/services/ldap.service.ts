@@ -164,10 +164,15 @@ export class LdapService {
                 'sn',
                 'department',
                 'physicalDeliveryOfficeName',
+                'company',
+                'description',
                 'title',
                 'telephoneNumber',
+                'mobile',
                 'ipPhone',
                 'otherTelephone',
+                'homePhone',
+                'pager',
                 'memberOf',
               ],
             });
@@ -271,10 +276,15 @@ export class LdapService {
               'sn',
               'department',
               'physicalDeliveryOfficeName',
+              'company',
+              'description',
               'title',
               'telephoneNumber',
+              'mobile',
               'ipPhone',
               'otherTelephone',
+              'homePhone',
+              'pager',
               'memberOf',
             ],
           });
@@ -368,13 +378,63 @@ export class LdapService {
       givenName = sAMAccountName;
     }
 
-    const department =
+    let department =
       getAttr(entry.department) ||
       getAttr(entry.physicalDeliveryOfficeName) ||
-      'Comunidad Universitaria UNALM';
-    const cargo = getAttr(entry.title) || 'Usuario Institucional';
-    const telefono = getAttr(entry.telephoneNumber) || getAttr(entry.ipPhone);
-    const anexo = getAttr(entry.otherTelephone);
+      getAttr(entry.company);
+
+    if (!department && entry.dn) {
+      const ouMatches = String(entry.dn).match(/OU=([^,]+)/g);
+      if (ouMatches && ouMatches.length > 0) {
+        const cleanedOUs = ouMatches
+          .map((m: string) => m.replace('OU=', ''))
+          .filter((ou: string) => ou !== 'UNALM' && ou !== 'UNALM Servicios');
+        department = cleanedOUs.length > 0
+          ? cleanedOUs.reverse().join(' - ')
+          : ouMatches.map((m: string) => m.replace('OU=', '')).reverse().join(' - ');
+      }
+    }
+
+    if (!department) {
+      department = 'Comunidad Universitaria UNALM';
+    }
+
+    const cargo = getAttr(entry.title) || getAttr(entry.description) || 'Personal Institucional';
+
+    const rawMobile = getAttr(entry.mobile);
+    const rawTel = getAttr(entry.telephoneNumber);
+    const rawIp = getAttr(entry.ipPhone);
+    const rawOther = getAttr(entry.otherTelephone);
+    const rawHome = getAttr(entry.homePhone);
+
+    let telefono = '';
+    let anexo = '';
+
+    // Celular prioritario
+    const allPhoneCandidates = [rawMobile, rawTel, rawHome, rawIp].filter(Boolean);
+    for (const cand of allPhoneCandidates) {
+      const digits = cand.replace(/\D/g, '');
+      if (digits.length === 9 && digits.startsWith('9')) {
+        telefono = digits;
+        break;
+      } else if (!telefono && digits.length >= 7) {
+        telefono = cand;
+      }
+    }
+
+    // Anexo: si hay otherTelephone o ipPhone corto (2 a 6 dígitos) o indicador de anexo
+    if (rawOther && rawOther.replace(/\D/g, '').length >= 2 && rawOther.replace(/\D/g, '').length <= 6) {
+      anexo = rawOther.replace(/\D/g, '');
+    } else if (rawIp && rawIp.replace(/\D/g, '').length >= 2 && rawIp.replace(/\D/g, '').length <= 6) {
+      anexo = rawIp.replace(/\D/g, '');
+    } else if (rawTel) {
+      const extMatch = rawTel.match(/(?:ext|anx|anexo|#)\.?\s*(\d{2,6})/i);
+      if (extMatch) {
+        anexo = extMatch[1];
+      } else if (rawTel.replace(/\D/g, '').length >= 2 && rawTel.replace(/\D/g, '').length <= 5) {
+        anexo = rawTel.replace(/\D/g, '');
+      }
+    }
 
     let groups: string[] = [];
     if (entry.memberOf) {
