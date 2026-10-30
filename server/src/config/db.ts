@@ -13,11 +13,13 @@ export const dbPool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
   timezone: '-05:00', // GMT-5 Perú / UNALM
+  charset: 'utf8mb4',
 });
 
 export async function runDatabaseMigrations(): Promise<void> {
   const connection = await dbPool.getConnection();
   try {
+    await connection.query("SET NAMES 'utf8mb4'");
     // 1. Asegurar rol MESA_AYUDA en tabla roles
     await connection.query(`
       INSERT INTO roles (id, codigo, nombre, descripcion)
@@ -93,6 +95,8 @@ export async function runDatabaseMigrations(): Promise<void> {
       { name: 'materiales_usados', type: 'TEXT NULL' },
       { name: 'materiales_sobrantes', type: 'TEXT NULL' },
       { name: 'referencia_ubicacion', type: 'VARCHAR(255) NULL' },
+      { name: 'es_equipo', type: 'TINYINT(1) NOT NULL DEFAULT 0' },
+      { name: 'numero_inventario', type: 'VARCHAR(100) NULL' },
     ];
 
     for (const col of sgTicketColumns) {
@@ -104,6 +108,10 @@ export async function runDatabaseMigrations(): Promise<void> {
         }
       }
     }
+
+    try {
+      await connection.query(`ALTER TABLE tickets ADD INDEX idx_tickets_numero_inventario (numero_inventario)`);
+    } catch (e: any) {}
 
     // 5. Asegurar que tickets.urgencia soporte CRITICA
     try {
@@ -557,6 +565,32 @@ export async function runDatabaseMigrations(): Promise<void> {
       FROM tickets 
       WHERE tecnico_id IS NOT NULL;
     `);
+
+    // Auto-sanitización de tildes y caracteres mal codificados (reversión de doble codificación UTF-8 / Mojibake)
+    try {
+      const [textCols] = await connection.query<any[]>(`
+        SELECT TABLE_NAME, COLUMN_NAME 
+        FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = ? 
+          AND DATA_TYPE IN ('varchar', 'text', 'mediumtext', 'longtext', 'tinytext')
+      `, [env.DB_NAME]);
+
+      if (Array.isArray(textCols)) {
+        for (const { TABLE_NAME, COLUMN_NAME } of textCols) {
+          try {
+            await connection.query(`
+              UPDATE \`${TABLE_NAME}\`
+              SET \`${COLUMN_NAME}\` = CONVERT(CAST(CONVERT(\`${COLUMN_NAME}\` USING latin1) AS BINARY) USING utf8mb4)
+              WHERE BINARY \`${COLUMN_NAME}\` LIKE '%Ã%'
+            `);
+          } catch {
+            // Ignorar columnas individuales si tienen restricciones de integridad
+          }
+        }
+      }
+    } catch (sanitizeErr) {
+      console.warn('[Database Migration UTF-8 Normalization Warning]:', sanitizeErr);
+    }
 
     console.log('[Database Migrations OK] Esquema sincronizado con Módulos OTIC, Servicios Generales e Inspecciones Preventivas SIGI (ROF UNALM 2023).');
 

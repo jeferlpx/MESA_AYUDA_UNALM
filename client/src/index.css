@@ -12,7 +12,7 @@
   }
 }
 
-/* Modo oscuro adaptativo para tarjetas, fondos y textos */
+/* Modo oscuro adaptativo para tarjetas, fondos, textos e inputs */
 .dark .bg-slate-50 {
   background-color: #0b1120 !important;
 }
@@ -22,10 +22,24 @@
 .dark .bg-slate-100 {
   background-color: #1e293b !important;
 }
+.dark .bg-slate-200 {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+.dark .bg-slate-300 {
+  background-color: #475569 !important;
+  color: #f8fafc !important;
+}
+.dark .border-slate-100 {
+  border-color: #1e293b !important;
+}
 .dark .border-slate-200 {
   border-color: #1e293b !important;
 }
 .dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+.dark .border-slate-700 {
   border-color: #334155 !important;
 }
 .dark .text-slate-900,
@@ -41,6 +55,11 @@
 .dark .text-slate-500 {
   color: #94a3b8 !important;
 }
+.dark .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Campos de entrada e inputs en modo noche */
 .dark input:not([type="checkbox"]):not([type="radio"]),
 .dark select,
 .dark textarea {
@@ -48,17 +67,128 @@
   color: #f8fafc !important;
   border-color: #334155 !important;
 }
+.dark select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
 .dark .hover\:bg-slate-50:hover {
   background-color: #1e293b !important;
 }
 .dark .hover\:bg-slate-100:hover {
   background-color: #334155 !important;
 }
+.dark .hover\:bg-slate-200:hover {
+  background-color: #475569 !important;
+}
 .dark table thead tr {
   background-color: #1e293b !important;
 }
 .dark table tbody tr:hover {
-  background-color: #1e293b/60 !important;
+  background-color: rgba(30, 41, 59, 0.6) !important;
+}
+
+/* Adaptación de pasteles claros en modo noche */
+.dark .bg-amber-50,
+.dark .bg-amber-100\/50,
+.dark .bg-amber-100 {
+  background-color: rgba(120, 53, 15, 0.32) !important;
+}
+.dark .border-amber-200,
+.dark .border-amber-300 {
+  border-color: rgba(217, 119, 6, 0.45) !important;
+}
+.dark .text-amber-800,
+.dark .text-amber-900,
+.dark .text-amber-700 {
+  color: #fde68a !important;
+}
+
+.dark .bg-emerald-50,
+.dark .bg-emerald-100\/50,
+.dark .bg-emerald-100,
+.dark .bg-unalm-50,
+.dark .bg-green-50 {
+  background-color: rgba(6, 78, 59, 0.32) !important;
+}
+.dark .border-emerald-200,
+.dark .border-emerald-300,
+.dark .border-unalm-200,
+.dark .border-unalm-300,
+.dark .border-green-200 {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+}
+.dark .text-emerald-800,
+.dark .text-emerald-900,
+.dark .text-emerald-700,
+.dark .text-unalm-700,
+.dark .text-unalm-800,
+.dark .text-green-800 {
+  color: #6ee7b7 !important;
+}
+
+.dark .bg-blue-50,
+.dark .bg-blue-100\/50,
+.dark .bg-blue-100,
+.dark .bg-sky-50 {
+  background-color: rgba(30, 58, 138, 0.32) !important;
+}
+.dark .border-blue-200,
+.dark .border-blue-300,
+.dark .border-sky-200 {
+  border-color: rgba(59, 130, 246, 0.45) !important;
+}
+.dark .text-blue-800,
+.dark .text-blue-900,
+.dark .text-blue-700,
+.dark .text-sky-800 {
+  color: #93c5fd !important;
+}
+
+.dark .bg-rose-50,
+.dark .bg-rose-100,
+.dark .bg-red-50,
+.dark .bg-red-100 {
+  background-color: rgba(136, 19, 55, 0.32) !important;
+}
+.dark .border-rose-200,
+.dark .border-rose-300,
+.dark .border-red-200,
+.dark .border-red-300 {
+  border-color: rgba(244, 63, 94, 0.45) !important;
+}
+.dark .text-rose-800,
+.dark .text-rose-900,
+.dark .text-rose-700,
+.dark .text-red-800,
+.dark .text-red-700 {
+  color: #fda4af !important;
+}
+
+.dark .bg-purple-50,
+.dark .bg-purple-100,
+.dark .bg-indigo-50 {
+  background-color: rgba(88, 28, 135, 0.32) !important;
+}
+.dark .border-purple-200,
+.dark .border-purple-300,
+.dark .border-indigo-200 {
+  border-color: rgba(168, 85, 247, 0.45) !important;
+}
+.dark .text-purple-800,
+.dark .text-purple-700,
+.dark .text-indigo-800 {
+  color: #d8b4fe !important;
+}
+
+/* Preservar fondo blanco en el escudo institucional */
+.escudo-white-bg,
+.dark .escudo-white-bg {
+  background-color: #ffffff !important;
 }
 
 

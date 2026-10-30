@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 
 interface SGDashboardPageProps {
-  onSelectTicketDetail?: (ticketId: number) => void;
+  onSelectTicketDetail?: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
   onNavigateTab?: (tab: string) => void;
 }
 
@@ -986,7 +986,7 @@ export const SGDashboardPage: React.FC<SGDashboardPageProps> = ({
                       {onSelectTicketDetail && (
                         <button
                           type="button"
-                          onClick={() => onSelectTicketDetail(t.id)}
+                          onClick={() => onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado)}
                           className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center space-x-1 shadow-xs"
                         >
                           <span>Ver Detalle</span>

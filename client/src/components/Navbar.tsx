@@ -34,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
                 </button>
               )}
 
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white p-1 flex items-center justify-center shadow-md border border-white/20 shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white escudo-white-bg p-1 flex items-center justify-center shadow-md border border-white/20 shrink-0">
                 <img
                   src="./escudo-color.png"
                   alt="Escudo UNALM"

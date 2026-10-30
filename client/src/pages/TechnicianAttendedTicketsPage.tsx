@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 interface TechnicianAttendedTicketsPageProps {
-  onSelectTicketDetail: (ticketId: number) => void;
+  onSelectTicketDetail: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
 }
 
 export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPageProps> = ({
@@ -289,7 +289,7 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
                 filteredTickets.map((t) => (
                   <tr
                     key={t.id}
-                    onClick={() => onSelectTicketDetail(t.id)}
+                    onClick={() => onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado)}
                     className="hover:bg-slate-50/80 cursor-pointer transition-colors"
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-unalm-700 whitespace-nowrap">
@@ -351,7 +351,7 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onSelectTicketDetail(t.id);
+                          onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado);
                         }}
                         className="p-2 bg-unalm-50 hover:bg-unalm-100 text-unalm-700 rounded-xl border border-unalm-200 font-bold text-xs transition-colors inline-flex items-center space-x-1"
                       >
@@ -389,7 +389,7 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
             filteredTickets.map((t) => (
               <div
                 key={t.id}
-                onClick={() => onSelectTicketDetail(t.id)}
+                onClick={() => onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado)}
                 className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs space-y-3 transition-all hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer"
               >
                 {/* Encabezado: Código y Calificación CSAT */}
@@ -451,7 +451,7 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSelectTicketDetail(t.id);
+                      onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado);
                     }}
                     className="w-full sm:w-auto px-4 py-2 bg-unalm-50 dark:bg-slate-800 hover:bg-unalm-100 dark:hover:bg-slate-700 text-unalm-700 dark:text-emerald-300 rounded-xl border border-unalm-200 dark:border-slate-700 font-bold text-xs transition-colors flex items-center justify-center space-x-1.5"
                   >

@@ -20,6 +20,7 @@ const handleFlexibleUpload = (req: Request, res: Response, next: NextFunction) =
 };
 
 router.get('/', TicketController.listTickets);
+router.get('/inventory/:inventoryNumber', TicketController.getEquipmentHistory);
 router.get('/:id', TicketController.getTicketDetail);
 router.post('/', handleFlexibleUpload, TicketController.createTicket);
 router.put('/:id/status', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'SOLICITANTE'), handleFlexibleUpload, TicketController.changeStatus);

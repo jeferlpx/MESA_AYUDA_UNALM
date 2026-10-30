@@ -131,6 +131,8 @@ export interface TicketDB {
   datos_vehiculares?: string;
   materiales_usados?: string;
   materiales_sobrantes?: string;
+  es_equipo?: boolean;
+  numero_inventario?: string | null;
   canal_origen: string;
   fecha_apertura: string;
   fecha_primera_respuesta?: string;

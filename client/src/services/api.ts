@@ -178,6 +178,8 @@ export const api = {
     apiFetch(`/tickets/${id}`),
   getTicketById: (id: number) => 
     apiFetch(`/tickets/${id}`),
+  getEquipmentHistory: (numeroInventario: string) =>
+    apiFetch(`/tickets/inventory/${encodeURIComponent(numeroInventario.trim())}`),
   createTicket: (formData: FormData) => 
     apiFetch('/tickets', { method: 'POST', body: formData }),
   updateStatus: (

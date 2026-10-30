@@ -47,10 +47,12 @@ import {
   Upload,
   CheckCircle,
   Building2,
+  Laptop,
 } from 'lucide-react';
+import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
 
 interface SpecialistDashboardProps {
-  onSelectTicketDetail: (ticketId: number) => void;
+  onSelectTicketDetail: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
 }
 
 export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSelectTicketDetail }) => {
@@ -59,6 +61,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEquipmentCode, setSelectedEquipmentCode] = useState<string | null>(null);
 
   const isSGUser = Boolean(user?.rol && ['MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG'].includes(user.rol));
   const isMesaAyudaOrAdmin = Boolean(user?.rol && ['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol));
@@ -828,6 +831,20 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                             🚨 SIGI PREVENTIVA
                           </span>
                         )}
+                        {t.numero_inventario && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEquipmentCode(t.numero_inventario!);
+                            }}
+                            className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors cursor-pointer w-fit"
+                            title="Ver historial de atenciones de este equipo"
+                          >
+                            <Laptop className="w-3 h-3 text-blue-600" />
+                            <span>#{t.numero_inventario}</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4 max-w-xs">
@@ -998,7 +1015,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                       )}
 
                       <button
-                        onClick={() => onSelectTicketDetail(t.id)}
+                        onClick={() => onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado)}
                         className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold border border-slate-300 transition-colors"
                       >
                         Ver Detalle
@@ -1059,6 +1076,19 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                           SG
                         </span>
                       )}
+                      {t.numero_inventario && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEquipmentCode(t.numero_inventario!);
+                          }}
+                          className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                        >
+                          <Laptop className="w-3 h-3 text-blue-500" />
+                          <span>#{t.numero_inventario}</span>
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <UrgencyBadge urgency={t.urgencia} />
@@ -1069,7 +1099,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                   {/* Título & Servicio */}
                   <div
                     className="space-y-1 cursor-pointer"
-                    onClick={() => onSelectTicketDetail(t.id)}
+                    onClick={() => onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado)}
                   >
                     <h3 className="font-extrabold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2 hover:text-unalm-600 dark:hover:text-emerald-400 transition-colors">
                       {t.titulo}
@@ -1233,7 +1263,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                   type="button"
                   onClick={() => {
                     setIsDrawerOpen(false);
-                    onSelectTicketDetail(selectedTicket.id);
+                    onSelectTicketDetail(selectedTicket.id, selectedTicket.codigo_correlativo, selectedTicket.estado);
                   }}
                   className="text-[11px] font-bold text-unalm-700 hover:text-unalm-900 flex items-center space-x-1 cursor-pointer bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs hover:bg-slate-50 transition-colors"
                 >
@@ -1999,6 +2029,16 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Modal: Historial de Atenciones del Bien */}
+      {selectedEquipmentCode && (
+        <EquipmentHistoryModal
+          isOpen={Boolean(selectedEquipmentCode)}
+          onClose={() => setSelectedEquipmentCode(null)}
+          numeroInventario={selectedEquipmentCode}
+          onSelectTicketDetail={onSelectTicketDetail}
+        />
       )}
     </div>
   );

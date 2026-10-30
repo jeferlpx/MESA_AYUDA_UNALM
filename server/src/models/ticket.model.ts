@@ -319,6 +319,8 @@ export class TicketModel {
     canalOrigen?: string;
     fechaLimiteRespuesta?: Date | null;
     fechaLimiteResolucion?: Date | null;
+    esEquipo?: boolean;
+    numeroInventario?: string | null;
   }): Promise<number> {
     const estadoInicial = data.tecnicoId ? 'ASIGNADO' : 'REPORTADO';
 
@@ -327,8 +329,8 @@ export class TicketModel {
         codigo_correlativo, modulo, titulo, descripcion, tipo, prioridad, impacto, urgencia, complejidad, estado,
         solicitante_id, tecnico_id, categoria_id, ubicacion_oficina, referencia_ubicacion, contacto_local, horario_acceso,
         subtipo_intervencion, datos_vehiculares, materiales_usados, canal_origen,
-        fecha_limite_respuesta, fecha_limite_resolucion
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        fecha_limite_respuesta, fecha_limite_resolucion, es_equipo, numero_inventario
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.codigoCorrelativo,
         data.modulo || 'OTIC',
@@ -353,10 +355,36 @@ export class TicketModel {
         data.canalOrigen || 'PORTAL_WEB',
         data.fechaLimiteRespuesta || null,
         data.fechaLimiteResolucion || null,
+        data.esEquipo ? 1 : 0,
+        data.numeroInventario ? data.numeroInventario.trim() : null,
       ]
     );
 
     return result.insertId;
+  }
+
+  static async getHistoryByEquipment(numeroInventario: string): Promise<TicketDB[]> {
+    const cleaned = numeroInventario?.trim();
+    if (!cleaned) return [];
+
+    const [rows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT t.*,
+              CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre,
+              sol.email as solicitante_email,
+              sol.facultad_dependencia as solicitante_dependencia,
+              CONCAT(tec.nombres, ' ', tec.apellidos) as tecnico_nombre,
+              tec.email as tecnico_email,
+              cat.nombre as categoria_nombre
+       FROM tickets t
+       INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+       LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+       INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
+       WHERE LOWER(t.numero_inventario) = LOWER(?)
+       ORDER BY t.fecha_apertura DESC`,
+      [cleaned]
+    );
+
+    return rows as TicketDB[];
   }
 
   static async updateTicketStatus(
@@ -514,6 +542,8 @@ export class TicketModel {
       [ticketId]
     );
 
+    const motivoLimpio = motivo?.trim() || 'Reapertura de ticket por solicitud usuaria';
+
     // Registrar reapertura en auditoría
     await this.logAudit({
       ticketId,
@@ -521,7 +551,7 @@ export class TicketModel {
       accion: 'REAPERTURA_TICKET',
       campoModificado: 'estado',
       valorAnterior: 'RESUELTO',
-      valorNuevo: `ASIGNADO - Motivo: ${motivo || 'Reapertura de ticket por solicitud usuaria'}`,
+      valorNuevo: `Motivo: ${motivoLimpio}`,
     });
   }
 

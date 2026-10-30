@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 interface InfrastructureInspectionsPageProps {
-  onSelectTicketDetail?: (ticketId: number) => void;
+  onSelectTicketDetail?: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
 }
 
 export const InfrastructureInspectionsPage: React.FC<InfrastructureInspectionsPageProps> = ({
@@ -637,7 +637,7 @@ export const InfrastructureInspectionsPage: React.FC<InfrastructureInspectionsPa
                                   type="button"
                                   onClick={() => {
                                     setIsDetailModalOpen(false);
-                                    onSelectTicketDetail(f.ticket_id!);
+                                    onSelectTicketDetail(f.ticket_id!, f.ticket_codigo || undefined);
                                   }}
                                   className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors"
                                   title="Ver Ticket en Mesa de Ayuda"

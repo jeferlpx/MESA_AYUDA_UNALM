@@ -41,14 +41,18 @@ import {
   MessageSquare,
   RefreshCw,
   Users,
+  Laptop,
+  History,
 } from 'lucide-react';
+import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
 
 interface TicketDetailPageProps {
   ticketId: number;
   onBack: () => void;
+  onTicketLoaded?: (ticket: Ticket) => void;
 }
 
-export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, onBack }) => {
+export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, onBack, onTicketLoaded }) => {
   const { user } = useAuth();
   const toast = useToast();
 
@@ -81,8 +85,17 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
   const [resolucionArchivo, setResolucionArchivo] = useState<File | null>(null);
   const [submittingResolution, setSubmittingResolution] = useState(false);
 
+  // Solicitant Reopen Modal State
+  const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
+  const [motivoReapertura, setMotivoReapertura] = useState('');
+  const [submittingReopen, setSubmittingReopen] = useState(false);
+  const [reopenError, setReopenError] = useState<string | null>(null);
+
   // Upload more attachments
   const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  // Equipment History Modal State
+  const [isEquipmentHistoryModalOpen, setIsEquipmentHistoryModalOpen] = useState(false);
 
   // Lightbox modal for image attachments
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -112,6 +125,7 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
       const res = await api.getTicketById(ticketId);
       if (res.success && res.data) {
         setTicket(res.data.ticket);
+        if (onTicketLoaded) onTicketLoaded(res.data.ticket);
         setComments(res.data.comments || []);
         const rawAdjuntos = res.data.adjuntos || res.data.attachments || [];
         setAdjuntos(
@@ -261,6 +275,35 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
     }
   };
 
+  const handleReopenTicketDetail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticket) return;
+    if (!motivoReapertura.trim()) {
+      setReopenError('Por favor ingrese el motivo de la reapertura del ticket.');
+      return;
+    }
+    if (motivoReapertura.trim().length < 5) {
+      setReopenError('Por favor detalle un poco más el motivo (mínimo 5 caracteres).');
+      return;
+    }
+
+    setSubmittingReopen(true);
+    setReopenError(null);
+    try {
+      const res = await api.reopenTicket(ticket.id, motivoReapertura.trim());
+      if (res.success) {
+        toast.success('El ticket ha sido reaperturado exitosamente para continuar su atención técnica.', 'Reapertura Registrada');
+        setIsReopenModalOpen(false);
+        setMotivoReapertura('');
+        await loadTicketData();
+      }
+    } catch (err: any) {
+      setReopenError(err.message || 'Error al reabrir ticket');
+    } finally {
+      setSubmittingReopen(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
@@ -327,17 +370,29 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
   const isMesaAyudaOrAdmin = Boolean(
     user?.rol && ['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol)
   );
+  const isOwnerSolicitante = Boolean(user && (user.id === ticket.solicitante_id || user.rol === 'SOLICITANTE'));
+  const canReopenDetail = Boolean(
+    ticket &&
+    ticket.estado === 'RESUELTO' &&
+    ticket.fecha_resolucion &&
+    isOwnerSolicitante &&
+    ((Date.now() - new Date(ticket.fecha_resolucion).getTime()) / (1000 * 60 * 60 * 24)) <= 5
+  );
+
+  const backButtonLabel = isOwnerSolicitante ? 'Volver a Mis Requerimientos' : 'Volver al Listado de Tickets';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       {/* Top Navigation & Breadcrumb */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
+          type="button"
           onClick={onBack}
-          className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-colors shadow-2xs cursor-pointer"
+          className="inline-flex items-center space-x-2.5 px-4 py-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-xs font-bold transition-all shadow-xs hover:shadow-md cursor-pointer group active:scale-95"
+          title="Regresar al listado anterior"
         >
-          <ArrowLeft className="w-4 h-4 text-slate-500" />
-          <span>Volver a la Cola</span>
+          <ArrowLeft className="w-4 h-4 text-slate-500 dark:text-slate-400 group-hover:-translate-x-1 transition-transform" />
+          <span>← {backButtonLabel}</span>
         </button>
 
         <div className="flex items-center space-x-2">
@@ -374,6 +429,23 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Resolver y Cerrar Atención</span>
+            </button>
+          )}
+
+          {/* Botón Reabrir para el solicitante si está resuelto y dentro de 5 días */}
+          {canReopenDetail && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsReopenModalOpen(true);
+                setMotivoReapertura('');
+                setReopenError(null);
+              }}
+              className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 text-xs font-extrabold transition-all flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+              title="Reabrir ticket dentro de los 5 días posteriores a la resolución"
+            >
+              <RotateCcw className="w-4 h-4 text-rose-600" />
+              <span>Reabrir Ticket</span>
             </button>
           )}
         </div>
@@ -418,6 +490,35 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
         <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
           {ticket.titulo}
         </h1>
+
+        {/* Bien / Equipo Patrimonial Vinculado */}
+        {ticket.numero_inventario && (
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 rounded-2xl">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Laptop className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-300 block">
+                  Equipo / Bien Institucional Vinculado
+                </span>
+                <span className="font-mono font-extrabold text-sm text-slate-900 dark:text-white">
+                  N° de Inventario: {ticket.numero_inventario}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsEquipmentHistoryModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
+              title="Consultar historial técnico y atenciones previas de este bien"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Ver Historial del Bien</span>
+            </button>
+          </div>
+        )}
 
         {/* SLA Timeline representation */}
         <div className="pt-2 border-t border-slate-100">
@@ -801,7 +902,7 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
           </div>
 
           {/* Solution Report Card (If RESUELTO) */}
-          {ticket.estado === 'RESUELTO' && ticket.solucion_detalle && (
+          {ticket.estado === 'RESUELTO' && (
             <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-3xl shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center space-x-2">
@@ -815,14 +916,41 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
                 )}
               </div>
 
-              <p className="text-xs text-emerald-950 font-medium leading-relaxed whitespace-pre-line bg-white/80 p-4 rounded-2xl border border-emerald-200">
-                {ticket.solucion_detalle}
-              </p>
+              {ticket.solucion_detalle ? (
+                <p className="text-xs text-emerald-950 font-medium leading-relaxed whitespace-pre-line bg-white/80 p-4 rounded-2xl border border-emerald-200">
+                  {ticket.solucion_detalle}
+                </p>
+              ) : (
+                <p className="text-xs text-emerald-800 italic bg-white/60 p-3 rounded-2xl border border-emerald-200">
+                  Atención técnica completada satisfactoriamente.
+                </p>
+              )}
 
               {ticket.materiales_usados && (
                 <div className="text-xs text-emerald-900">
                   <strong className="font-bold">Materiales / Repuestos Aplicados: </strong>
                   <span>{ticket.materiales_usados}</span>
+                </div>
+              )}
+
+              {canReopenDetail && (
+                <div className="pt-3 border-t border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-xs text-emerald-900 font-medium">
+                    ¿El inconveniente técnico persiste o requiere atención adicional?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsReopenModalOpen(true);
+                      setMotivoReapertura('');
+                      setReopenError(null);
+                    }}
+                    className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
+                    title="Reabrir ticket dentro de los 5 días posteriores a la resolución"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Reaperturar Ticket</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -1083,32 +1211,152 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
               </p>
             ) : (
               <div className="space-y-4 relative before:absolute before:top-2 before:bottom-2 before:left-3 before:w-0.5 before:bg-slate-200">
-                {historial.map((ev) => (
-                  <div key={ev.id} className="relative pl-7 text-xs space-y-1">
-                    <div className="absolute left-1.5 top-1 w-3.5 h-3.5 rounded-full bg-unalm-600 border-2 border-white shadow-2xs" />
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-800">{ev.evento}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {new Date(ev.creado_en).toLocaleDateString('es-PE', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
+                {historial.map((ev) => {
+                  const isReopen = ev.accion === 'REAPERTURA_TICKET' || ev.evento?.toLowerCase().includes('reapertura');
+                  const isResolution = ev.evento?.toLowerCase().includes('resolución') || ev.detalles?.includes('RESUELTO') || ev.valor_nuevo?.includes('RESUELTO');
+
+                  if (isReopen) {
+                    const rawMotivo = ev.detalles || ev.valor_nuevo || '';
+                    const motivoText = rawMotivo.replace(/^(ASIGNADO\s*-\s*)?Motivo:\s*/i, '').trim();
+
+                    return (
+                      <div key={ev.id} className="relative pl-7 text-xs space-y-1.5 animate-in fade-in">
+                        <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-rose-600 border-2 border-white shadow-sm ring-2 ring-rose-200 flex items-center justify-center">
+                          <RotateCcw className="w-2.5 h-2.5 text-white" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-extrabold text-rose-950 text-xs flex items-center space-x-1">
+                              <span>Reapertura del Requerimiento</span>
+                            </span>
+                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 rounded-md">
+                              Reaperturado
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(ev.creado_en).toLocaleDateString('es-PE', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        {ev.usuario_nombre && (
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            Por: <strong className="text-slate-800">{ev.usuario_nombre}</strong>
+                          </p>
+                        )}
+                        <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-2xl text-xs space-y-1 shadow-2xs">
+                          <span className="text-[11px] font-extrabold text-rose-900 flex items-center space-x-1">
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                            <span>Motivo de la Reapertura registrado por el usuario:</span>
+                          </span>
+                          <p className="text-xs font-semibold text-rose-950 bg-white/95 p-2.5 rounded-xl border border-rose-200/80 leading-relaxed italic">
+                            "{motivoText || 'Reapertura registrada por el usuario'}"
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (isResolution) {
+                    let transitionText = 'ASIGNADO → RESUELTO';
+                    let informeTecnicoText = '';
+
+                    if (ev.detalles) {
+                      const parts = ev.detalles.split(/(?:-|\n)\s*Informe Técnico:\s*/i);
+                      if (parts.length > 1) {
+                        transitionText = parts[0].trim();
+                        informeTecnicoText = parts[1].trim();
+                      } else {
+                        transitionText = ev.detalles;
+                      }
+                    }
+                    if (!informeTecnicoText && ticket.solucion_detalle) {
+                      informeTecnicoText = ticket.solucion_detalle;
+                    }
+
+                    return (
+                      <div key={ev.id} className="relative pl-7 text-xs space-y-1.5 animate-in fade-in">
+                        <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-emerald-600 border-2 border-white shadow-sm ring-2 ring-emerald-200 flex items-center justify-center">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-extrabold text-emerald-950 text-xs flex items-center space-x-1">
+                              <span>Resolución del Requerimiento</span>
+                            </span>
+                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-md">
+                              Resuelto
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(ev.creado_en).toLocaleDateString('es-PE', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        {ev.usuario_nombre && (
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            Por: <strong className="text-slate-800">{ev.usuario_nombre}</strong>
+                          </p>
+                        )}
+                        <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-xs space-y-2 shadow-2xs">
+                          <div className="flex items-center justify-between">
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-[10px] font-black font-mono">
+                              {transitionText || 'ASIGNADO → RESUELTO'}
+                            </span>
+                            <span className="text-[10px] font-bold text-emerald-700">Atención Técnica Concluida</span>
+                          </div>
+                          {informeTecnicoText ? (
+                            <div className="space-y-1 pt-1.5 border-t border-emerald-200/60">
+                              <span className="text-[11px] font-extrabold text-emerald-900 flex items-center space-x-1">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Informe Técnico / Trabajo Finalizado por el Especialista:</span>
+                              </span>
+                              <p className="text-xs font-medium text-emerald-950 bg-white/95 p-2.5 rounded-xl border border-emerald-200/80 leading-relaxed whitespace-pre-line">
+                                {informeTecnicoText}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-500 italic">Atención completada satisfactoriamente.</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={ev.id} className="relative pl-7 text-xs space-y-1">
+                      <div className="absolute left-1.5 top-1 w-3.5 h-3.5 rounded-full bg-unalm-600 border-2 border-white shadow-2xs" />
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-800">{ev.evento}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {new Date(ev.creado_en).toLocaleDateString('es-PE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      {ev.usuario_nombre && (
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          Por: {ev.usuario_nombre}
+                        </p>
+                      )}
+                      {ev.detalles && (
+                        <p className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-200 leading-relaxed">
+                          {ev.detalles}
+                        </p>
+                      )}
                     </div>
-                    {ev.usuario_nombre && (
-                      <p className="text-[11px] text-slate-500 font-medium">
-                        Por: {ev.usuario_nombre}
-                      </p>
-                    )}
-                    {ev.detalles && (
-                      <p className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-200 leading-relaxed">
-                        {ev.detalles}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1449,6 +1697,98 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
             </div>
           </form>
         </Modal>
+      )}
+
+      {/* Modal: Reapertura de Ticket por el Solicitante */}
+      {isReopenModalOpen && ticket && (
+        <Modal
+          isOpen={isReopenModalOpen}
+          onClose={() => {
+            if (!submittingReopen) {
+              setIsReopenModalOpen(false);
+              setMotivoReapertura('');
+              setReopenError(null);
+            }
+          }}
+          title="Reapertura del Ticket / Requerimiento"
+          subtitle={`Ticket: ${ticket.codigo_correlativo} — ${ticket.titulo}`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleReopenTicketDetail} className="space-y-4">
+            {reopenError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{reopenError}</span>
+              </div>
+            )}
+
+            <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-2xl text-xs text-rose-950 space-y-1">
+              <div className="font-extrabold flex items-center space-x-1.5 text-rose-900">
+                <RotateCcw className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Indique el Motivo de Reapertura</span>
+              </div>
+              <p className="text-[11px] text-rose-800 leading-relaxed">
+                Por favor, describa con claridad la razón por la cual requiere reabrir este caso (por ejemplo: la falla continúa, el problema no quedó solucionado o fallaron las pruebas). Esta información se notificará al técnico y quedará registrada en la trazabilidad del ticket.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Motivo de la Reapertura *
+              </label>
+              <textarea
+                required
+                rows={4}
+                value={motivoReapertura}
+                onChange={(e) => setMotivoReapertura(e.target.value)}
+                placeholder="Describa detalladamente el motivo de la reapertura (ej: El equipo sigue sin conexión a red tras el reinicio / Persiste la falla técnica reportada...)"
+                className="w-full p-3 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none font-medium text-slate-900 placeholder-slate-400"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                Mínimo 5 caracteres explicando la persistencia del requerimiento.
+              </span>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={submittingReopen}
+                onClick={() => {
+                  setIsReopenModalOpen(false);
+                  setMotivoReapertura('');
+                  setReopenError(null);
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={submittingReopen || !motivoReapertura.trim()}
+                className="px-5 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {submittingReopen ? (
+                  <span>Reaperturando...</span>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Confirmar Reapertura</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal: Historial de Atenciones del Bien Patrimonial */}
+      {isEquipmentHistoryModalOpen && ticket?.numero_inventario && (
+        <EquipmentHistoryModal
+          isOpen={isEquipmentHistoryModalOpen}
+          onClose={() => setIsEquipmentHistoryModalOpen(false)}
+          numeroInventario={ticket.numero_inventario}
+          currentTicketId={ticket.id}
+        />
       )}
     </div>
   );

@@ -21,6 +21,7 @@ import {
   PlusCircle,
   HelpCircle,
   ChevronRight,
+  ArrowLeft,
   FileText,
   AlertCircle,
   Star,
@@ -37,10 +38,11 @@ import {
   Calendar,
   Truck,
   CheckCircle2,
+  Laptop,
 } from 'lucide-react';
 
 interface SolicitantPortalProps {
-  onSelectTicketDetail: (ticketId: number) => void;
+  onSelectTicketDetail: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
   viewMode?: 'all' | 'catalog' | 'my-tickets' | 'pending-surveys';
   onNavigateTab?: (tab: string) => void;
 }
@@ -162,7 +164,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
   const [myTickets, setMyTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCatalogModule, setActiveCatalogModule] = useState<'ALL' | 'OTIC' | 'SERVICIOS_GENERALES'>('ALL');
+  const [activeCatalogModule, setActiveCatalogModule] = useState<'ALL' | 'OTIC' | 'SERVICIOS_GENERALES'>('OTIC');
   const [activeTicketModule, setActiveTicketModule] = useState<'ALL' | 'OTIC' | 'SERVICIOS_GENERALES'>('ALL');
   const [ticketStatusFilter, setTicketStatusFilter] = useState<'ALL' | 'REPORTADO' | 'OBSERVADO' | 'ASIGNADO' | 'RESUELTO'>('ALL');
 
@@ -182,6 +184,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
 
   // Modal State for New Ticket
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -192,12 +195,24 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Autofocus en el campo de descripción cuando se abre el modal
+  useEffect(() => {
+    if (isModalOpen) {
+      const timer = setTimeout(() => {
+        descriptionTextareaRef.current?.focus();
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [isModalOpen]);
+
   // Campos de campo para Servicios Generales
   const [contactoLocal, setContactoLocal] = useState('');
   const [horarioAcceso, setHorarioAcceso] = useState('');
   const [subtipoIntervencion, setSubtipoIntervencion] = useState('MANTENIMIENTO_CORRECTIVO');
   const [datosVehiculares, setDatosVehiculares] = useState('');
   const [materialesUsados, setMaterialesUsados] = useState('');
+  const [esEquipo, setEsEquipo] = useState(false);
+  const [numeroInventario, setNumeroInventario] = useState('');
 
   // Modals
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -223,7 +238,10 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
   const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
   const [surveyTicket, setSurveyTicket] = useState<Ticket | null>(null);
   const [selectedTechForModal, setSelectedTechForModal] = useState<number | null>(null);
-  const [reopeningTicketId, setReopeningTicketId] = useState<number | null>(null);
+  const [reopeningTicket, setReopeningTicket] = useState<Ticket | null>(null);
+  const [motivoReapertura, setMotivoReapertura] = useState('');
+  const [submittingReopen, setSubmittingReopen] = useState(false);
+  const [reopenError, setReopenError] = useState<string | null>(null);
 
   // Helper to obtain suggestions strictly for current category
   const currentCategorySuggestions = useMemo(() => {
@@ -335,7 +353,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
 
   const proceedToOpenTicketModal = (cat: ServiceCategory, customContact?: string) => {
     setSelectedCategory(cat);
-    setTitulo('');
+    setTitulo(cat.nombre); // Asignación automática del título con el nombre del servicio
     setDescripcion('');
     setReferenciaUbicacion('');
     setContactoLocal(''); // Contacto de referencia extra siempre inicia en blanco como se requiere
@@ -343,12 +361,19 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
     setSubtipoIntervencion('MANTENIMIENTO_CORRECTIVO');
     setDatosVehiculares('');
     setMaterialesUsados('');
+    setEsEquipo(false);
+    setNumeroInventario('');
     setTipo(cat.modulo === 'SERVICIOS_GENERALES' ? 'SOLICITUD_SERVICIO' : 'INCIDENTE');
     setUrgencia('MEDIA');
     setFiles([]);
     setFormError(null);
     setTitleSuggestionsOpen(false);
     setIsModalOpen(true);
+
+    // Enfocar y preseleccionar directamente el campo de descripción detallada
+    setTimeout(() => {
+      descriptionTextareaRef.current?.focus();
+    }, 120);
   };
 
   const handleSaveRequiredContact = async (e: React.FormEvent) => {
@@ -407,18 +432,9 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCategory || !titulo.trim() || !descripcion.trim()) {
-      setFormError('Por favor complete los campos obligatorios marcados con (*)');
-      return;
-    }
-
-    if (!contactoLocal.trim()) {
-      setFormError('Por favor ingrese el contacto de referencia (N° de celular) para la atención');
-      return;
-    }
-
-    if (!horarioAcceso.trim()) {
-      setFormError('Por favor ingrese el horario en que el personal técnico puede acercarse a atender el caso');
+    const finalTitulo = titulo.trim() || selectedCategory?.nombre || 'Requerimiento de Usuario';
+    if (!selectedCategory || !descripcion.trim()) {
+      setFormError('Por favor complete la descripción detallada del requerimiento (*)');
       return;
     }
 
@@ -427,7 +443,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
 
     try {
       const formData = new FormData();
-      formData.append('titulo', titulo.trim());
+      formData.append('titulo', finalTitulo);
       formData.append('descripcion', descripcion.trim());
       formData.append('tipo', tipo);
       formData.append('urgencia', urgencia);
@@ -458,6 +474,12 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
       if (materialesUsados.trim()) {
         formData.append('materialesUsados', materialesUsados.trim());
       }
+      if (esEquipo) {
+        formData.append('esEquipo', 'true');
+        if (numeroInventario.trim()) {
+          formData.append('numeroInventario', numeroInventario.trim());
+        }
+      }
       if (files.length > 0) {
         files.forEach((f) => {
           formData.append('files', f);
@@ -472,7 +494,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
         setCreatedTicketInfo({
           id: res.data.id,
           codigoCorrelativo: res.data.codigoCorrelativo || res.data.codigo,
-          titulo: titulo.trim(),
+          titulo: finalTitulo,
           descripcion: descripcion.trim(),
           categoriaNombre: selectedCategory.nombre,
           urgencia: urgencia,
@@ -489,6 +511,8 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
           fechaLimiteResolucion: res.data.fechaLimiteResolucion,
           previewImageUrl: previewUrl,
         });
+        setEsEquipo(false);
+        setNumeroInventario('');
         setIsModalOpen(false);
         setIsSuccessModalOpen(true);
         loadData();
@@ -574,17 +598,39 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
     loadData();
   };
 
-  const handleConfirmReopen = async (ticketId: number, e: React.MouseEvent) => {
+  const handleOpenReopenModal = (ticket: Ticket, e: React.MouseEvent) => {
     e.stopPropagation();
+    setReopeningTicket(ticket);
+    setMotivoReapertura('');
+    setReopenError(null);
+  };
+
+  const handleConfirmReopenSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reopeningTicket) return;
+    if (!motivoReapertura.trim()) {
+      setReopenError('Por favor ingrese el motivo de la reapertura del ticket.');
+      return;
+    }
+    if (motivoReapertura.trim().length < 5) {
+      setReopenError('Por favor detalle un poco más el motivo (mínimo 5 caracteres).');
+      return;
+    }
+
+    setSubmittingReopen(true);
+    setReopenError(null);
     try {
-      const res = await api.reopenTicket(ticketId, 'Reapertura solicitada por el usuario desde el portal web');
+      const res = await api.reopenTicket(reopeningTicket.id, motivoReapertura.trim());
       if (res.success) {
-        setReopeningTicketId(null);
-        toast.success('El ticket ha sido reabierto para atención técnica.', 'Reapertura Registrada');
+        setReopeningTicket(null);
+        setMotivoReapertura('');
+        toast.success('El ticket ha sido reaperturado exitosamente para continuar su atención técnica.', 'Reapertura Registrada');
         loadData();
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error al reabrir ticket', 'No se pudo reabrir');
+      setReopenError(err.message || 'Error al reabrir ticket');
+    } finally {
+      setSubmittingReopen(false);
     }
   };
 
@@ -652,32 +698,36 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
 
               {/* Quick Search */}
               <div className="mt-6 relative">
-                <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar servicio (Ej: Wi-Fi, Electricidad, Gasfitería, Correo, SIRA, Pintura, Climatización)..."
-                  className="w-full pl-12 pr-4 py-3.5 bg-white text-slate-900 placeholder-slate-400 rounded-2xl shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm font-medium"
+                  className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl shadow-lg border border-transparent dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm font-medium transition-colors"
                 />
               </div>
             </div>
           </div>
 
           {/* Module Selector Tabs for Catalog */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-            <div className="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-2xl overflow-x-auto">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveCatalogModule('ALL')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
                   activeCatalogModule === 'ALL'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>🌐 Todos los Servicios</span>
-                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-mono font-bold">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                  activeCatalogModule === 'ALL'
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}>
                   {categories.length}
                 </span>
               </button>
@@ -687,13 +737,13 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 onClick={() => setActiveCatalogModule('OTIC')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
                   activeCatalogModule === 'OTIC'
-                    ? 'bg-unalm-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-unalm-600 text-white shadow-xs ring-2 ring-emerald-400/30'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>💻 Tecnologías de Información (OTIC)</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                  activeCatalogModule === 'OTIC' ? 'bg-unalm-800 text-white' : 'bg-slate-200 text-slate-700'
+                  activeCatalogModule === 'OTIC' ? 'bg-unalm-800 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}>
                   {countOTICCategories}
                 </span>
@@ -704,20 +754,20 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 onClick={() => setActiveCatalogModule('SERVICIOS_GENERALES')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
                   activeCatalogModule === 'SERVICIOS_GENERALES'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-400/30'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>🏗️ Servicios Generales & Mantenimiento</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                  activeCatalogModule === 'SERVICIOS_GENERALES' ? 'bg-amber-800 text-white' : 'bg-slate-200 text-slate-700'
+                  activeCatalogModule === 'SERVICIOS_GENERALES' ? 'bg-amber-800 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}>
                   {countSGCategories}
                 </span>
               </button>
             </div>
 
-            <span className="text-xs text-slate-500 font-bold bg-slate-100 px-3 py-1.5 rounded-xl">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
               {filteredCategories.length} Servicios Disponibles
             </span>
           </div>
@@ -781,38 +831,51 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
          SECCIÓN 2: HISTORIAL DE MIS REQUERIMIENTOS
          ========================================================================= */}
       {showTicketsSection && (
-        <div className="space-y-6 pt-6 border-t border-slate-200">
+        <div className={`space-y-6 ${viewMode === 'all' ? 'pt-6 border-t border-slate-200 dark:border-slate-800' : ''}`}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-xl font-extrabold text-slate-900">
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
                 Mis Requerimientos Registrados
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Consulta el estado y seguimiento de todos tus tickets institucionales.
               </p>
             </div>
 
             {onNavigateTab && viewMode === 'my-tickets' && (
-              <button
-                onClick={() => onNavigateTab('catalog')}
-                className="px-5 py-2.5 bg-unalm-600 hover:bg-unalm-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all flex items-center space-x-2 shrink-0 self-start sm:self-auto cursor-pointer"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Registrar Nuevo Requerimiento</span>
-              </button>
+              <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('catalog')}
+                  className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/80 text-slate-800 dark:text-slate-100 rounded-2xl text-xs font-bold shadow-2xs transition-all flex items-center space-x-1.5 cursor-pointer"
+                  title="Regresar al catálogo de servicios"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  <span>Volver al Catálogo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('catalog')}
+                  className="px-5 py-2.5 bg-unalm-600 hover:bg-unalm-700 text-white rounded-2xl text-xs font-extrabold shadow-md transition-all flex items-center space-x-2 cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Nuevo Requerimiento</span>
+                </button>
+              </div>
             )}
           </div>
 
           {/* Module Filter Tabs for My Tickets */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 md:flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-3 md:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setActiveTicketModule('ALL')}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                   activeTicketModule === 'ALL'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Todos ({myTickets.length})
@@ -823,7 +886,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                   activeTicketModule === 'OTIC'
                     ? 'bg-unalm-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 💻 OTIC ({myTickets.filter((t) => t.modulo === 'OTIC' || !t.modulo).length})
@@ -834,7 +897,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                   activeTicketModule === 'SERVICIOS_GENERALES'
                     ? 'bg-amber-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 🏗️ Servicios Generales ({myTickets.filter((t) => t.modulo === 'SERVICIOS_GENERALES').length})
@@ -842,12 +905,14 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
             </div>
 
             {/* Status Filter Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1.5 md:gap-1 bg-slate-100 p-1.5 md:p-1 rounded-2xl md:rounded-xl w-full sm:w-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1.5 md:gap-1 bg-slate-100 dark:bg-slate-800/80 p-1.5 md:p-1 rounded-2xl md:rounded-xl w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('ALL')}
                 className={`col-span-2 sm:col-span-1 px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                  ticketStatusFilter === 'ALL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                  ticketStatusFilter === 'ALL'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Todos ({myTickets.filter((t) => activeTicketModule === 'ALL' || t.modulo === activeTicketModule).length})
@@ -856,7 +921,9 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 type="button"
                 onClick={() => setTicketStatusFilter('REPORTADO')}
                 className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                  ticketStatusFilter === 'REPORTADO' ? 'bg-amber-500 text-slate-950 shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
+                  ticketStatusFilter === 'REPORTADO'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs font-extrabold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Reportados ({countReportados})
@@ -865,7 +932,9 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 type="button"
                 onClick={() => setTicketStatusFilter('OBSERVADO')}
                 className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                  ticketStatusFilter === 'OBSERVADO' ? 'bg-amber-600 text-white shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
+                  ticketStatusFilter === 'OBSERVADO'
+                    ? 'bg-amber-600 text-white shadow-xs font-extrabold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Observados ({countObservados})
@@ -874,7 +943,9 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 type="button"
                 onClick={() => setTicketStatusFilter('ASIGNADO')}
                 className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                  ticketStatusFilter === 'ASIGNADO' ? 'bg-blue-600 text-white shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
+                  ticketStatusFilter === 'ASIGNADO'
+                    ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Asignados ({countAsignados})
@@ -883,7 +954,9 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 type="button"
                 onClick={() => setTicketStatusFilter('RESUELTO')}
                 className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
-                  ticketStatusFilter === 'RESUELTO' ? 'bg-emerald-600 text-white shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-900'
+                  ticketStatusFilter === 'RESUELTO'
+                    ? 'bg-emerald-600 text-white shadow-xs font-extrabold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Resueltos ({countResueltos})
@@ -908,7 +981,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 return (
                   <div
                     key={ticket.id}
-                    onClick={() => onSelectTicketDetail(ticket.id)}
+                    onClick={() => onSelectTicketDetail(ticket.id, ticket.codigo_correlativo, ticket.estado)}
                     className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col md:flex-row md:items-center md:justify-between gap-4 cursor-pointer group"
                   >
                     <div className="space-y-2 flex-1 min-w-0">
@@ -925,6 +998,11 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                         </span>
                         <StatusBadge status={ticket.estado} />
                         <UrgencyBadge urgency={ticket.urgencia} />
+                        {ticket.numero_inventario && (
+                          <span className="font-mono text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            💻 Bien: #{ticket.numero_inventario}
+                          </span>
+                        )}
                       </div>
 
                       <h3 className="font-bold text-slate-900 text-sm group-hover:text-unalm-700 transition-colors truncate">
@@ -979,7 +1057,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                       {isEligibleForReopen(ticket) && (
                         <button
                           type="button"
-                          onClick={(e) => handleConfirmReopen(ticket.id, e)}
+                          onClick={(e) => handleOpenReopenModal(ticket, e)}
                           className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-colors flex items-center space-x-1 cursor-pointer"
                           title="Reabrir ticket dentro de los 5 días posteriores a la resolución"
                         >
@@ -1075,7 +1153,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                     <button
                       type="button"
-                      onClick={() => onSelectTicketDetail(st.id)}
+                      onClick={() => onSelectTicketDetail(st.id, st.codigo_correlativo, st.estado)}
                       className="text-xs font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
                     >
                       Ver Detalle
@@ -1110,161 +1188,133 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
         >
           <form onSubmit={handleCreateTicket} className="space-y-4">
             {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center space-x-2">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-800 dark:text-rose-300 text-xs font-bold flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            {/* Módulo Tag */}
-            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-lg border ${
-                selectedCategory.modulo === 'SERVICIOS_GENERALES'
-                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                  : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              }`}>
-                {selectedCategory.modulo === 'SERVICIOS_GENERALES' ? '🏗️ Servicios Generales' : '💻 Tecnologías de Información (OTIC)'}
-              </span>
+            {/* Navegación rápida dentro del modal & Módulo Tag */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center space-x-1.5 cursor-pointer py-1"
+                title="Regresar al catálogo sin enviar"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>← Volver al Catálogo</span>
+              </button>
 
-              <span className="text-xs text-slate-500 font-semibold">
-                Solicitante: <strong className="text-slate-800">{user?.nombres} {user?.apellidos}</strong>
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-lg border ${
+                  selectedCategory.modulo === 'SERVICIOS_GENERALES'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                }`}>
+                  {selectedCategory.modulo === 'SERVICIOS_GENERALES' ? '🏗️ Servicios Generales' : '💻 Tecnologías de Información (OTIC)'}
+                </span>
+
+                <span className="text-xs text-slate-500 font-semibold hidden sm:inline">
+                  Solicitante: <strong className="text-slate-800 dark:text-slate-200">{user?.nombres} {user?.apellidos}</strong>
+                </span>
+              </div>
             </div>
 
-            {/* Título del Requerimiento con sugerencias predictivas */}
-            <div className="relative" ref={suggestionsBoxRef}>
+            {/* Nivel de Urgencia */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Nivel de Urgencia *
+              </label>
+              <select
+                value={urgencia}
+                onChange={(e) => setUrgencia(e.target.value as any)}
+                className="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-unalm-500 focus:outline-none bg-white dark:bg-slate-900 shadow-2xs"
+              >
+                <option value="BAJA">Baja — Puede esperar atención programada</option>
+                <option value="MEDIA">Media — Afectación parcial de actividades</option>
+                <option value="ALTA">Alta — Afectación total de labores / Urgente</option>
+                <option value="CRITICA">Crítica — Emergencia operativa / Clases / Servidores</option>
+              </select>
+            </div>
+
+            {/* Descripción Detallada (Autoseleccionada y lista para escribir) */}
+            <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-slate-700">
-                  Título del Requerimiento *
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Descripción Detallada del Requerimiento *
                 </label>
-                {currentCategorySuggestions.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setTitleSuggestionsOpen(!titleSuggestionsOpen)}
-                    className="text-[11px] text-unalm-600 hover:text-unalm-800 font-bold flex items-center space-x-1 cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Sugerencias frecuentes</span>
-                  </button>
-                )}
+                <span className="text-[10px] text-unalm-700 dark:text-emerald-400 font-bold bg-unalm-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-unalm-200 dark:border-emerald-800/50">
+                  ✍️ Escriba aquí los detalles
+                </span>
               </div>
-
-              <input
-                type="text"
+              <textarea
+                ref={descriptionTextareaRef}
+                autoFocus
                 required
-                value={titulo}
-                onChange={(e) => {
-                  setTitulo(e.target.value);
-                  if (!titleSuggestionsOpen && e.target.value.length > 0) {
-                    setTitleSuggestionsOpen(true);
-                  }
-                }}
-                onFocus={() => {
-                  if (currentCategorySuggestions.length > 0) {
-                    setTitleSuggestionsOpen(true);
-                  }
-                }}
-                placeholder="Escriba libremente el título o el problema que presenta..."
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 placeholder-slate-400"
+                rows={4}
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Describa con precisión la falla técnica, el problema o el requerimiento solicitado..."
+                className="w-full p-3.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 placeholder-slate-400 dark:placeholder-slate-500 shadow-2xs"
               />
+            </div>
 
-              {/* Suggestions Dropdown (Only appears if user focuses and matches are found) */}
-              {titleSuggestionsOpen && currentCategorySuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 max-h-52 overflow-y-auto space-y-1 animate-in fade-in slide-in-from-top-1">
-                  <div className="px-2 py-1 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-slate-100">
-                    <span>Sugerencias rápidas para esta categoría</span>
-                    <button
-                      type="button"
-                      onClick={() => setTitleSuggestionsOpen(false)}
-                      className="text-slate-400 hover:text-slate-600 text-xs font-bold"
-                    >
-                      ✕
-                    </button>
+            {/* Checkbox: ¿Es un equipo o bien de la institución? */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5 transition-all">
+              <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={esEquipo}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setEsEquipo(checked);
+                    if (!checked) setNumeroInventario('');
+                  }}
+                  className="w-4 h-4 rounded text-unalm-600 focus:ring-unalm-500 border-slate-300 dark:border-slate-700 cursor-pointer accent-unalm-600"
+                />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+                  <Laptop className="w-3.5 h-3.5 text-unalm-600 dark:text-emerald-400" />
+                  <span>¿Es un equipo o bien de la institución?</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal hidden sm:inline">(PC, Laptop, Impresora, etc.)</span>
+                </span>
+              </label>
+
+              {/* Cuadrito expandible para N° de Inventario del bien */}
+              {esEquipo && (
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-unalm-800 dark:text-emerald-400">
+                      N° de Inventario / Código Patrimonial del Bien *
+                    </label>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                      Placa / Etiqueta patrimonial
+                    </span>
                   </div>
-                  {currentCategorySuggestions.map((sug, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setTitulo(sug);
-                        setTitleSuggestionsOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-unalm-50 hover:text-unalm-800 transition-colors flex items-center space-x-2 cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span className="truncate">{sug}</span>
-                    </button>
-                  ))}
+                  <input
+                    type="text"
+                    required={esEquipo}
+                    value={numeroInventario}
+                    onChange={(e) => setNumeroInventario(e.target.value)}
+                    placeholder="Ej: 740895000012, PC-LAB-01, IMP-DIR-04..."
+                    className="w-full px-3 py-2 border border-unalm-300 dark:border-emerald-700/60 rounded-xl text-xs bg-white dark:bg-slate-900 focus:ring-2 focus:ring-unalm-500 focus:outline-none font-mono font-bold text-slate-900 dark:text-white shadow-2xs placeholder-slate-400"
+                  />
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">
+                    Ingrese el código que figura en el sticker o código patrimonial para llevar su historial de atenciones.
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* Ubicación institucional y Nivel de Urgencia (Grid 2 columnas) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start space-x-3 text-xs">
-                <Building2 className="w-4 h-4 text-unalm-600 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <span className="text-[11px] text-slate-400 font-bold block">Ubicación Institucional del Solicitante:</span>
-                  <span className="font-bold text-slate-800 block truncate">
-                    {user?.facultadDependencia || 'Campus Universitario UNALM'}
-                  </span>
-                  {user?.ubicacionReferencia && (
-                    <span className="text-[10px] text-slate-500 font-medium block truncate mt-0.5">
-                      📍 Ref: {user.ubicacionReferencia}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nivel de Urgencia *
-                </label>
-                <select
-                  value={urgencia}
-                  onChange={(e) => setUrgencia(e.target.value as any)}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-unalm-500 focus:outline-none bg-white shadow-2xs"
-                >
-                  <option value="BAJA">Baja — Puede esperar atención programada</option>
-                  <option value="MEDIA">Media — Afectación parcial de actividades</option>
-                  <option value="ALTA">Alta — Afectación total de labores / Urgente</option>
-                  <option value="CRITICA">Crítica — Emergencia operativa / Clases / Servidores</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Contacto de Referencia y Horario Preferente para Atención Técnica (Obligatorios) */}
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+            {/* Datos de Coordinación y Visita Técnica (Opcionales) */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center space-x-1.5">
+                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
                   <Phone className="w-3.5 h-3.5 text-unalm-600" />
-                  <span>Contacto de Referencia & Horario para Atención Técnica *</span>
+                  <span>Coordinación de Visita Técnica</span>
                 </span>
-                <span className="text-[10px] text-amber-800 bg-amber-100 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-md font-bold">
-                  Obligatorio
-                </span>
-              </div>
-
-              {/* Número de celular del solicitante registrado en su perfil institucional */}
-              <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-600/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
-                    <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <span className="text-slate-600 dark:text-slate-300 font-medium mr-1.5">N° de Celular Registrado en su Perfil:</span>
-                    <span className="font-extrabold text-slate-900 dark:text-white">
-                      {user?.telefono || 'No registrado en perfil'}
-                    </span>
-                    {user?.anexo && (
-                      <span className="text-slate-500 dark:text-slate-400 font-normal ml-1">
-                        (Anexo {user.anexo})
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold bg-white/80 dark:bg-slate-800 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-700 self-start sm:self-auto">
-                  Registrado en Perfil
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">
+                  Opcional
                 </span>
               </div>
 
@@ -1272,57 +1322,45 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                      Contacto de Referencia (N° de Celular) *
+                      Contacto de Referencia (N° Celular)
                     </label>
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.2 rounded border border-amber-200 dark:border-amber-800">
-                      Contacto Extra
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                      Opcional
                     </span>
                   </div>
                   <input
                     type="text"
-                    required
                     value={contactoLocal}
                     onChange={(e) => setContactoLocal(e.target.value)}
                     placeholder="Ej: 998 877 665 / Celular adicional"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 dark:text-white shadow-2xs"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 dark:text-white shadow-2xs placeholder-slate-400"
                   />
                   <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">
-                    N° telefónico extra o alternativo de referencia para coordinar la visita técnica.
+                    N° telefónico extra o alternativo de referencia para coordinar la visita.
                   </span>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Horario para que el Técnico se Acerque *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Horario para que el Técnico se Acerque
+                    </label>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                      Opcional
+                    </span>
+                  </div>
                   <input
                     type="text"
-                    required
                     value={horarioAcceso}
                     onChange={(e) => setHorarioAcceso(e.target.value)}
                     placeholder="Ej: Lun-Vie 8:00 AM - 1:00 PM o Hoy desde 2:00 PM"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 shadow-2xs"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium text-slate-900 dark:text-white shadow-2xs placeholder-slate-400"
                   />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">
                     Horario de disponibilidad en su oficina o ambiente para atender el caso.
                   </span>
                 </div>
               </div>
-            </div>
-
-            {/* Descripción Detallada */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Descripción Detallada del Requerimiento *
-              </label>
-              <textarea
-                required
-                rows={4}
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Describa con precisión la falla técnica o el requerimiento solicitado..."
-                className="w-full p-3 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-unalm-500 focus:outline-none font-medium"
-              />
             </div>
 
             {/* Adjuntar Archivos o Evidencias */}
@@ -1377,7 +1415,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
           ticketData={createdTicketInfo}
           onViewTicket={(ticketId) => {
             setIsSuccessModalOpen(false);
-            onSelectTicketDetail(ticketId);
+            onSelectTicketDetail(ticketId, createdTicketInfo?.codigoCorrelativo, 'REPORTADO');
           }}
           onPrintServiceRequest={handlePrintServiceRequestFromCreated}
           onPrintWorkOrder={handlePrintWorkOrderFromCreated}
@@ -1570,6 +1608,88 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
           </div>
         </form>
       </Modal>
+
+      {/* Modal: Reapertura de Ticket por el Solicitante */}
+      {reopeningTicket && (
+        <Modal
+          isOpen={Boolean(reopeningTicket)}
+          onClose={() => {
+            if (!submittingReopen) {
+              setReopeningTicket(null);
+              setMotivoReapertura('');
+              setReopenError(null);
+            }
+          }}
+          title="Reapertura del Ticket / Requerimiento"
+          subtitle={`Ticket: ${reopeningTicket.codigo_correlativo} — ${reopeningTicket.titulo}`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleConfirmReopenSubmit} className="space-y-4">
+            {reopenError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{reopenError}</span>
+              </div>
+            )}
+
+            <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-2xl text-xs text-rose-950 space-y-1">
+              <div className="font-extrabold flex items-center space-x-1.5 text-rose-900">
+                <RotateCcw className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Indique el Motivo de Reapertura</span>
+              </div>
+              <p className="text-[11px] text-rose-800 leading-relaxed">
+                Por favor, describa con claridad la razón por la cual requiere reabrir este caso (por ejemplo: la falla continúa, el problema no quedó solucionado o fallaron las pruebas). Esta información se notificará al técnico y quedará registrada en la trazabilidad del ticket.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Motivo de la Reapertura *
+              </label>
+              <textarea
+                required
+                rows={4}
+                value={motivoReapertura}
+                onChange={(e) => setMotivoReapertura(e.target.value)}
+                placeholder="Describa detalladamente el motivo de la reapertura (ej: El equipo sigue sin conexión a red tras el reinicio / Persiste la falla técnica reportada...)"
+                className="w-full p-3 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none font-medium text-slate-900 placeholder-slate-400"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                Mínimo 5 caracteres explicando la persistencia del requerimiento.
+              </span>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={submittingReopen}
+                onClick={() => {
+                  setReopeningTicket(null);
+                  setMotivoReapertura('');
+                  setReopenError(null);
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={submittingReopen || !motivoReapertura.trim()}
+                className="px-5 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {submittingReopen ? (
+                  <span>Reaperturando...</span>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Confirmar Reapertura</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

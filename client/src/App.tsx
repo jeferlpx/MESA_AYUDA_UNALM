@@ -18,18 +18,19 @@ import { SGDashboardPage } from './pages/SGDashboardPage';
 import { TicketDetailPage } from './pages/TicketDetailPage';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 import { X } from 'lucide-react';
+import { TopNavigationBar } from './components/TopNavigationBar';
+import { EquipmentLookupModal } from './components/EquipmentLookupModal';
 
 const MainLayout: React.FC = () => {
   const { user, isAuthenticated, loading, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('catalog');
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+  const [selectedTicketCode, setSelectedTicketCode] = useState<string | null>(null);
+  const [selectedTicketStatus, setSelectedTicketStatus] = useState<string | null>(null);
+  const [isEquipmentLookupOpen, setIsEquipmentLookupOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   // Inicializar la pestaña según el perfil del usuario:
-  // Mesa de Ayuda SG aterriza en su nuevo Dashboard interactivo de SG
-  // Técnicos y mesa de ayuda OTIC aterrizan en su cola de triage / tickets
-  // Administradores y supervisores en su Dashboard Directivo
-  // Solicitantes en el Catálogo de Servicios
   useEffect(() => {
     if (user?.rol) {
       if (['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol)) {
@@ -43,6 +44,36 @@ const MainLayout: React.FC = () => {
       }
     }
   }, [user?.rol]);
+
+  // Manejo de historial HTML5 para evitar que el usuario salga del sistema con la flecha Atrás
+  useEffect(() => {
+    // Estado inicial en el navegador
+    window.history.replaceState({ tab: activeTab, ticketId: selectedTicketId, ticketCode: selectedTicketCode }, '');
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state) {
+        if (event.state.ticketId !== undefined) {
+          setSelectedTicketId(event.state.ticketId);
+          setSelectedTicketCode(event.state.ticketCode || null);
+        } else {
+          setSelectedTicketId(null);
+          setSelectedTicketCode(null);
+          setSelectedTicketStatus(null);
+        }
+        if (event.state.tab) {
+          setActiveTab(event.state.tab);
+        }
+      } else {
+        // Si no hay estado previo en la app, mantener la vista actual y quitar ticket detail
+        setSelectedTicketId(null);
+        setSelectedTicketCode(null);
+        setSelectedTicketStatus(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Guard de pestañas según rol del usuario para evitar 403 Forbidden
   const safeActiveTab = useMemo(() => {
@@ -78,8 +109,31 @@ const MainLayout: React.FC = () => {
     return <LoginPage />;
   }
 
-  const handleSelectTicketDetail = (ticketId: number) => {
+  const handleSelectTicketDetail = (ticketId: number, ticketCode?: string, ticketStatus?: string) => {
     setSelectedTicketId(ticketId);
+    if (ticketCode) setSelectedTicketCode(ticketCode);
+    if (ticketStatus) setSelectedTicketStatus(ticketStatus);
+    window.history.pushState({ tab: safeActiveTab, ticketId, ticketCode }, '');
+  };
+
+  const handleBackFromDetail = () => {
+    setSelectedTicketId(null);
+    setSelectedTicketCode(null);
+    setSelectedTicketStatus(null);
+    if (window.history.state && window.history.state.ticketId) {
+      window.history.back();
+    } else {
+      window.history.pushState({ tab: safeActiveTab, ticketId: null }, '');
+    }
+  };
+
+  const handleTabChange = (newTab: string) => {
+    setSelectedTicketId(null);
+    setSelectedTicketCode(null);
+    setSelectedTicketStatus(null);
+    setActiveTab(newTab);
+    setIsMobileMenuOpen(false);
+    window.history.pushState({ tab: newTab, ticketId: null }, '');
   };
 
   const isMissingDependencia =
@@ -111,7 +165,7 @@ const MainLayout: React.FC = () => {
           <div className="relative w-72 max-w-[85vw] bg-slate-900 h-full flex flex-col z-10 shadow-2xl animate-in slide-in-from-left duration-200">
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-lg bg-white escudo-white-bg p-1 flex items-center justify-center shadow-xs">
                   <img src="./escudo-color.png" alt="UNALM" className="w-full h-full object-contain" />
                 </div>
                 <div>
@@ -131,11 +185,7 @@ const MainLayout: React.FC = () => {
             <div className="flex-1 overflow-y-auto">
               <Sidebar
                 activeTab={selectedTicketId ? 'detail' : safeActiveTab}
-                onTabChange={(tab) => {
-                  setSelectedTicketId(null);
-                  setActiveTab(tab);
-                  setIsMobileMenuOpen(false);
-                }}
+                onTabChange={handleTabChange}
                 onCloseMobile={() => setIsMobileMenuOpen(false)}
                 isMobileDrawer
               />
@@ -149,20 +199,33 @@ const MainLayout: React.FC = () => {
         <div className="hidden md:flex shrink-0">
           <Sidebar
             activeTab={selectedTicketId ? 'detail' : safeActiveTab}
-            onTabChange={(tab) => {
-              setSelectedTicketId(null);
-              setActiveTab(tab);
-            }}
+            onTabChange={handleTabChange}
           />
         </div>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-0 print:overflow-visible print:h-auto print:block print:p-0">
-          {selectedTicketId ? (
-            <TicketDetailPage
-              ticketId={selectedTicketId}
-              onBack={() => setSelectedTicketId(null)}
-            />
-          ) : safeActiveTab === 'admin-dashboard' ? (
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <TopNavigationBar
+            userRole={user?.rol}
+            activeTab={safeActiveTab}
+            selectedTicketId={selectedTicketId}
+            selectedTicketCode={selectedTicketCode}
+            selectedTicketStatus={selectedTicketStatus}
+            onNavigateTab={handleTabChange}
+            onBack={handleBackFromDetail}
+            onOpenEquipmentLookup={() => setIsEquipmentLookupOpen(true)}
+          />
+
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-6 print:overflow-visible print:h-auto print:block print:p-0">
+            {selectedTicketId ? (
+              <TicketDetailPage
+                ticketId={selectedTicketId}
+                onBack={handleBackFromDetail}
+                onTicketLoaded={(t) => {
+                  setSelectedTicketCode(t.codigo_correlativo);
+                  setSelectedTicketStatus(t.estado);
+                }}
+              />
+            ) : safeActiveTab === 'admin-dashboard' ? (
             <AdminDashboardPage />
           ) : safeActiveTab === 'specialist' ? (
             <SpecialistDashboard onSelectTicketDetail={handleSelectTicketDetail} />
@@ -214,8 +277,17 @@ const MainLayout: React.FC = () => {
               }}
             />
           )}
-        </main>
+          </main>
+        </div>
       </div>
+
+      {isEquipmentLookupOpen && (
+        <EquipmentLookupModal
+          isOpen={isEquipmentLookupOpen}
+          onClose={() => setIsEquipmentLookupOpen(false)}
+          onSelectTicketDetail={handleSelectTicketDetail}
+        />
+      )}
 
       {user && needsInitialSetup && (
         <ForcePasswordChangeModal

@@ -104,8 +104,20 @@ export class TicketController {
             detalles = log.valor_nuevo || 'Requerimiento asignado a especialista técnico.';
             break;
           case 'CAMBIO_ESTADO':
-            evento = 'Cambio de Estado';
-            detalles = log.valor_anterior ? `${log.valor_anterior} → ${log.valor_nuevo}` : `Estado: ${log.valor_nuevo}`;
+            if (log.valor_nuevo === 'RESUELTO' || log.valor_nuevo?.startsWith('RESUELTO')) {
+              evento = 'Resolución del Requerimiento';
+              const solDetalle = ticket.solucion_detalle?.trim() || '';
+              if (log.valor_nuevo?.includes('Informe Técnico:') || log.valor_nuevo?.includes('Informe:')) {
+                detalles = log.valor_anterior ? `${log.valor_anterior} → ${log.valor_nuevo}` : log.valor_nuevo;
+              } else if (solDetalle) {
+                detalles = `${log.valor_anterior ? `${log.valor_anterior} → ` : ''}RESUELTO\nInforme Técnico: ${solDetalle}`;
+              } else {
+                detalles = log.valor_anterior ? `${log.valor_anterior} → ${log.valor_nuevo}` : `Estado: ${log.valor_nuevo}`;
+              }
+            } else {
+              evento = 'Cambio de Estado';
+              detalles = log.valor_anterior ? `${log.valor_anterior} → ${log.valor_nuevo}` : `Estado: ${log.valor_nuevo}`;
+            }
             break;
           case 'ADJUNTAR_ARCHIVO':
             evento = 'Archivo Adjuntado';
@@ -121,7 +133,11 @@ export class TicketController {
             break;
           case 'REAPERTURA_TICKET':
             evento = 'Reapertura del Requerimiento';
-            detalles = log.valor_nuevo || 'Ticket reabierto para atención técnica complementaria.';
+            if (log.valor_nuevo) {
+              detalles = log.valor_nuevo.replace(/^ASIGNADO\s*-\s*Motivo:\s*/i, 'Motivo: ');
+            } else {
+              detalles = 'Ticket reabierto para atención técnica complementaria.';
+            }
             break;
           default:
             evento = log.accion ? log.accion.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : 'Evento';
@@ -162,6 +178,26 @@ export class TicketController {
     }
   }
 
+  static async getEquipmentHistory(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) return res.status(401).json({ success: false, message: 'No autenticado' });
+
+      const inventoryNumber = req.params.inventoryNumber;
+      if (!inventoryNumber || !inventoryNumber.trim()) {
+        return res.status(400).json({ success: false, message: 'Número de inventario es requerido' });
+      }
+
+      const tickets = await TicketModel.getHistoryByEquipment(inventoryNumber);
+      return res.json({
+        success: true,
+        data: tickets,
+      });
+    } catch (error: any) {
+      console.error('[getEquipmentHistory Error]:', error);
+      return res.status(500).json({ success: false, message: 'Error al consultar historial de atenciones del bien' });
+    }
+  }
+
   static async createTicket(req: AuthenticatedRequest, res: Response) {
     try {
       if (!req.user) return res.status(401).json({ success: false, message: 'No autenticado' });
@@ -180,7 +216,16 @@ export class TicketController {
         subtipoIntervencion,
         datosVehiculares,
         materialesUsados,
+        esEquipo,
+        es_equipo,
+        numeroInventario,
+        numero_inventario,
       } = req.body;
+
+      const isEquipoFinal = esEquipo === true || esEquipo === 'true' || es_equipo === true || es_equipo === 'true';
+      const numInventarioFinal = isEquipoFinal
+        ? (numeroInventario ? String(numeroInventario).trim() : (numero_inventario ? String(numero_inventario).trim() : null))
+        : null;
 
       if (!titulo || !descripcion || !categoriaId) {
         return res.status(400).json({ success: false, message: 'Título, descripción y categoría de servicio son requeridos' });
@@ -253,6 +298,8 @@ export class TicketController {
         canalOrigen: 'PORTAL_WEB',
         fechaLimiteRespuesta,
         fechaLimiteResolucion,
+        esEquipo: isEquipoFinal,
+        numeroInventario: numInventarioFinal,
       });
 
       // Procesar archivos adjuntos si vienen en la petición (soporte múltiple con deduplicación)
@@ -444,13 +491,18 @@ export class TicketController {
         });
       }
 
+      let valorNuevoAudit: string = nuevoEstado;
+      if (nuevoEstado === 'RESUELTO' && solucionDetalle?.trim()) {
+        valorNuevoAudit = `RESUELTO - Informe Técnico: ${solucionDetalle.trim()}`;
+      }
+
       await TicketModel.logAudit({
         ticketId,
         usuarioId: req.user.id,
         accion: 'CAMBIO_ESTADO',
         campoModificado: 'estado',
         valorAnterior: estadoAnterior,
-        valorNuevo: nuevoEstado,
+        valorNuevo: valorNuevoAudit,
         ipOrigen: req.ip,
       });
 

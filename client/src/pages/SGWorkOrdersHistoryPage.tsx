@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 interface SGWorkOrdersHistoryPageProps {
-  onSelectTicketDetail: (ticketId: number) => void;
+  onSelectTicketDetail: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
 }
 
 const MESES = [
@@ -701,7 +701,7 @@ export const SGWorkOrdersHistoryPage: React.FC<SGWorkOrdersHistoryPageProps> = (
 
                         <button
                           type="button"
-                          onClick={() => onSelectTicketDetail(t.id)}
+                          onClick={() => onSelectTicketDetail(t.id, t.codigo_correlativo, t.estado)}
                           className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
                           title="Ver Detalle Completo del Requerimiento"
                         >

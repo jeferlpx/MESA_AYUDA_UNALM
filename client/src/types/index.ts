@@ -123,6 +123,8 @@ export interface Ticket {
   datos_vehiculares?: string;
   materiales_usados?: string;
   materiales_sobrantes?: string;
+  es_equipo?: boolean;
+  numero_inventario?: string | null;
   canal_origen: string;
   fecha_apertura: string;
   fecha_primera_respuesta?: string;
@@ -189,6 +191,9 @@ export interface TicketHistorial {
   usuario_id?: number;
   usuario_nombre?: string;
   creado_en: string;
+  accion?: string;
+  valor_anterior?: string;
+  valor_nuevo?: string;
 }
 
 export interface AuditLog {
