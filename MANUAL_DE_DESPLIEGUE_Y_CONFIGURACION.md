@@ -404,3 +404,4 @@ mysqldump -u user_helpdesk -p mesaayuda_db > backup_mesaayuda_$(date +%Y%m%d_%H%
 ---
 *Desarrollado para la Oficina de Tecnologías de la Información y Comunicaciones (OTIC) - UNALM.*  
 *Adaptable y portable para entidades del sector público y privado.*
+

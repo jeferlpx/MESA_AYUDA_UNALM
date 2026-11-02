@@ -446,9 +446,9 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
   return (
     <div className="space-y-6 max-w-[1700px] w-full mx-auto px-4 sm:px-6 py-6 animate-in fade-in duration-300">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 sm:p-7 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <div>
-          <div className="flex items-center space-x-2 text-unalm-600 font-bold text-xs uppercase tracking-wider mb-1">
+          <div className="flex items-center space-x-2 text-unalm-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider mb-1">
             <Zap className="w-4 h-4" />
             <span>
               {user?.rol === 'MESA_AYUDA_SG'
@@ -462,12 +462,12 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                       : 'Bandeja Personal de Especialista OTIC'}
             </span>
           </div>
-          <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {isMesaAyudaOrAdmin
               ? `Cola de Requerimientos & Asignación (${isSGUser ? 'Servicios Generales' : 'OTIC'})`
               : `Mis Tickets Asignados (${user?.nombres})`}
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {isMesaAyudaOrAdmin
               ? 'Gestión de colas REPORTADO, asignación de especialistas y seguimiento de SLAs.'
               : 'Atención directa de los tickets asignados a su persona.'}
@@ -477,10 +477,10 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
         <div className="flex items-center space-x-3">
           <button
             onClick={loadData}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors border border-slate-300 shadow-2xs"
+            className="p-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-all border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer active:scale-95"
             title="Refrescar lista"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-unalm-600 dark:text-emerald-400' : ''}`} />
           </button>
         </div>
       </div>

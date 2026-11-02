@@ -790,31 +790,31 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                     <button
                       key={cat.id}
                       onClick={() => handleOpenCategoryModal(cat)}
-                      className="flex flex-col text-left p-6 bg-white border border-slate-200 rounded-3xl shadow-xs hover:shadow-lg hover:border-unalm-500 transition-all duration-200 group relative overflow-hidden cursor-pointer"
+                      className="flex flex-col text-left p-6 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-xs card-hover-effect hover:border-unalm-500/80 dark:hover:border-emerald-500/60 group relative overflow-hidden cursor-pointer active:scale-[0.99]"
                     >
                       <div className="flex items-center justify-between w-full mb-3">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors shadow-xs ${
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 shadow-xs group-hover:scale-105 ${
                           isSG
-                            ? 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white'
-                            : 'bg-unalm-50 text-unalm-600 group-hover:bg-unalm-600 group-hover:text-white'
+                            ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white'
+                            : 'bg-unalm-50 dark:bg-emerald-950/50 text-unalm-600 dark:text-emerald-400 group-hover:bg-unalm-600 group-hover:text-white'
                         }`}>
                           <IconComp className="w-6 h-6" />
                         </div>
                         <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-lg border ${
                           isSG
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                            : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                         }`}>
                           {isSG ? '🏗️ Serv. Generales' : '💻 OTIC'}
                         </span>
                       </div>
-                      <h3 className="font-extrabold text-slate-900 text-base group-hover:text-unalm-700 transition-colors">
+                      <h3 className="font-extrabold text-slate-900 dark:text-white text-base group-hover:text-unalm-600 dark:group-hover:text-emerald-400 transition-colors">
                         {cat.nombre}
                       </h3>
-                      <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed flex-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 leading-relaxed flex-1">
                         {cat.descripcion}
                       </p>
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-unalm-600 group-hover:text-unalm-700">
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-unalm-600 dark:text-emerald-400 group-hover:text-unalm-700 dark:group-hover:text-emerald-300">
                         <span>Registrar Requerimiento</span>
                         <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
@@ -982,7 +982,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                   <div
                     key={ticket.id}
                     onClick={() => onSelectTicketDetail(ticket.id, ticket.codigo_correlativo, ticket.estado)}
-                    className="p-5 bg-white border border-slate-200 rounded-3xl shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col md:flex-row md:items-center md:justify-between gap-4 cursor-pointer group"
+                    className="p-5 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-xs card-hover-effect hover:border-unalm-500/70 dark:hover:border-emerald-500/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4 cursor-pointer group active:scale-[0.99]"
                   >
                     <div className="space-y-2 flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

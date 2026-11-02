@@ -237,36 +237,36 @@ export const AdminDashboardPage: React.FC = () => {
           {/* Top KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Tickets */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden card-hover-effect">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+                <span className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Total Requerimientos
                 </span>
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                   <LayoutDashboard className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-3xl font-extrabold text-slate-900 mt-2">
+              <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2">
                 {metrics?.totalTickets || 0}
               </p>
-              <div className="flex items-center space-x-2 text-[11px] text-slate-500 mt-2 font-medium">
-                <span className="text-amber-600 font-bold">{metrics?.reportados || 0} Pendientes</span>
+              <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                <span className="text-amber-600 dark:text-amber-400 font-bold">{metrics?.reportados || 0} Pendientes</span>
                 <span>•</span>
-                <span className="text-blue-600 font-bold">{metrics?.asignados || 0} En Atención</span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold">{metrics?.asignados || 0} En Atención</span>
               </div>
             </div>
 
             {/* MTTR Tiempo Promedio */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden card-hover-effect">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+                <span className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Tiempo Promedio Solución
                 </span>
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                   <Clock className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-3xl font-extrabold text-slate-900 mt-2">
+              <p className="text-3xl font-extrabold text-slate-900 dark:text-white mt-2">
                 {metrics?.tiempoPromedioResolucionHoras || 0} <span className="text-base font-semibold text-slate-500">horas</span>
               </p>
               <p className="text-[11px] text-slate-400 mt-2">
@@ -275,38 +275,38 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             {/* Efectividad Operativa */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden card-hover-effect">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+                <span className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Efectividad Operativa
                 </span>
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-3xl font-extrabold text-emerald-600 mt-2">
+              <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
                 {metrics?.cumplimientoSlaPorcentaje || 100}%
               </p>
-              <p className="text-[11px] text-emerald-700 mt-2 font-semibold">
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-2 font-semibold">
                 Requerimientos atendidos y resueltos con éxito
               </p>
             </div>
 
             {/* Satisfacción Promedio CSAT */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden card-hover-effect">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+                <span className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   Satisfacción CSAT
                 </span>
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-500 flex items-center justify-center">
                   <Star className="w-5 h-5 fill-amber-400" />
                 </div>
               </div>
               <div className="flex items-baseline space-x-2 mt-2">
-                <p className="text-3xl font-extrabold text-slate-900">
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white">
                   {metrics?.satisfaccionPromedio || 0}
                 </p>
-                <span className="text-xs text-amber-600 font-bold">/ 5.0 Estrellas</span>
+                <span className="text-xs text-amber-600 dark:text-amber-400 font-bold">/ 5.0 Estrellas</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-2">
                 Calificación promedio de usuarios finales

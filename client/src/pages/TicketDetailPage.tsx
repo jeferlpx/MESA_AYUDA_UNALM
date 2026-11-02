@@ -452,28 +452,28 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
       </div>
 
       {/* Main Ticket Banner Header */}
-      <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 sm:p-7 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`font-mono text-sm font-black px-3 py-1 rounded-xl border ${
-              isSG ? 'bg-amber-50 text-amber-900 border-amber-300' : 'bg-unalm-50 text-unalm-700 border-unalm-300'
+              isSG ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700' : 'bg-unalm-50 dark:bg-emerald-950/50 text-unalm-700 dark:text-emerald-300 border-unalm-300 dark:border-emerald-700'
             }`}>
               {ticket.codigo_correlativo}
             </span>
             <StatusBadge status={ticket.estado} />
             <UrgencyBadge urgency={ticket.urgencia} />
             <ComplexityBadge complexity={ticket.complejidad || 'BAJA'} />
-            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-xl">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">
               {ticket.categoria_nombre}
             </span>
             <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border ${
-              isSG ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              isSG ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
             }`}>
               {isSG ? '🏗️ Servicios Generales' : '💻 Tecnologías de Información (OTIC)'}
             </span>
           </div>
 
-          <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
+          <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
             <Clock className="w-4 h-4 text-slate-400" />
             <span>
               Registrado el {new Date(ticket.fecha_apertura).toLocaleDateString('es-PE', {
@@ -487,7 +487,7 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
           </div>
         </div>
 
-        <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
+        <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
           {ticket.titulo}
         </h1>
 

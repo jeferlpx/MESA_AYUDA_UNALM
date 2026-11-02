@@ -137,7 +137,7 @@ export const AdminEquipmentPage: React.FC<AdminEquipmentPageProps> = ({ onSelect
 
         {/* Tarjetas KPI de Resumen */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 card-hover-effect">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase">
               Bienes Registrados
             </span>
@@ -147,7 +147,7 @@ export const AdminEquipmentPage: React.FC<AdminEquipmentPageProps> = ({ onSelect
             </div>
           </div>
 
-          <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200/70 dark:border-blue-900/40">
+          <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-2xl border border-blue-200/70 dark:border-blue-900/40 card-hover-effect">
             <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 block uppercase">
               Total Mantenimientos
             </span>
@@ -157,7 +157,7 @@ export const AdminEquipmentPage: React.FC<AdminEquipmentPageProps> = ({ onSelect
             </div>
           </div>
 
-          <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200/70 dark:border-amber-900/40">
+          <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl border border-amber-200/70 dark:border-amber-900/40 card-hover-effect">
             <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 block uppercase">
               En Atención Activa
             </span>
@@ -167,7 +167,7 @@ export const AdminEquipmentPage: React.FC<AdminEquipmentPageProps> = ({ onSelect
             </div>
           </div>
 
-          <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/70 dark:border-emerald-900/40">
+          <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200/70 dark:border-emerald-900/40 card-hover-effect">
             <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 block uppercase">
               Operativos / Concluidos
             </span>
