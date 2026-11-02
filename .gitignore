@@ -51,14 +51,13 @@ client/ssl/
 certificado https/
 *.key
 *.pem
+*.crt
 
-# Guía confidencial de credenciales y claves de infraestructura (CRÍTICO: No subir a GitHub)
+# Guía confidencial de credenciales y claves de infraestructura (CRÍTICO: No subir a repositorios públicos)
 CREDENCIALES_*.md
 *CREDENCIALES*.md
 claves_*.md
 *PASSWORDS*.md
-
-# Documentación (excluir archivos .md excepto README.md raíz)
-*.md
-!/README.md
+*.secret
+*.passwd
 

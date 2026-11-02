@@ -10,6 +10,7 @@ USE `mesaayuda_db`;
 -- Desactivar temporalmente verificaciones de claves foráneas para recreación segura
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS `solicitudes_cuenta_ad`;
 DROP TABLE IF EXISTS `materiales_movimientos_sg`;
 DROP TABLE IF EXISTS `materiales_inventario_sg`;
 DROP TABLE IF EXISTS `hallazgos_inspeccion`;
@@ -179,6 +180,8 @@ CREATE TABLE `tickets` (
   `materiales_usados` TEXT NULL,
   `materiales_sobrantes` TEXT NULL,
   `referencia_ubicacion` VARCHAR(255) NULL,
+  `es_equipo` TINYINT(1) NOT NULL DEFAULT 0,
+  `numero_inventario` VARCHAR(100) NULL,
   `inspeccion_id` INT NULL,
   `hallazgo_id` INT NULL,
   `creado_en` DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -193,7 +196,8 @@ CREATE TABLE `tickets` (
   INDEX `idx_tickets_tecnico` (`tecnico_id`),
   INDEX `idx_tickets_categoria` (`categoria_id`),
   INDEX `idx_tickets_prioridad` (`prioridad`),
-  INDEX `idx_tickets_fecha_apertura` (`fecha_apertura`)
+  INDEX `idx_tickets_fecha_apertura` (`fecha_apertura`),
+  INDEX `idx_tickets_numero_inventario` (`numero_inventario`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================
@@ -317,6 +321,25 @@ CREATE TABLE `materiales_movimientos_sg` (
   `fecha` DATETIME DEFAULT CURRENT_TIMESTAMP,
   KEY `fk_mov_material` (`material_id`),
   CONSTRAINT `fk_mov_material` FOREIGN KEY (`material_id`) REFERENCES `materiales_inventario_sg` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================================
+-- 14. TABLA SOLICITUDES DE ALTA DE CUENTA EN DIRECTORIO ACTIVO (REDES)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `solicitudes_cuenta_ad` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `nombre_completo` VARCHAR(255) NOT NULL,
+  `dni` VARCHAR(20) NOT NULL,
+  `condicion` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(150) NOT NULL,
+  `facultad_dependencia` VARCHAR(255) NOT NULL,
+  `celular` VARCHAR(30) NOT NULL,
+  `anexo` VARCHAR(20) NULL,
+  `estado` ENUM('PENDIENTE', 'CREADO', 'RECHAZADO') NOT NULL DEFAULT 'PENDIENTE',
+  `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_solicitudes_dni` (`dni`),
+  INDEX `idx_solicitudes_email` (`email`),
+  INDEX `idx_solicitudes_estado` (`estado`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
