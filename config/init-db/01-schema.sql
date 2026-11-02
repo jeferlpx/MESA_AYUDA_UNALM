@@ -11,6 +11,7 @@ USE `mesaayuda_test_db`;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS `solicitudes_cuenta_ad`;
+DROP TABLE IF EXISTS `usuario_roles`;
 DROP TABLE IF EXISTS `materiales_movimientos_sg`;
 DROP TABLE IF EXISTS `materiales_inventario_sg`;
 DROP TABLE IF EXISTS `hallazgos_inspeccion`;
@@ -65,6 +66,21 @@ CREATE TABLE `usuarios` (
   INDEX `idx_usuarios_email` (`email`),
   INDEX `idx_usuarios_rol` (`rol_id`),
   INDEX `idx_usuarios_estado` (`estado`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================================
+-- 2.1 TABLA ROLES MÚLTIPLES POR USUARIO (RBAC MULTI-ROL)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `usuario_roles` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `usuario_id` INT NOT NULL,
+  `rol_id` INT NOT NULL,
+  `creado_en` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_usuario_rol` (`usuario_id`, `rol_id`),
+  CONSTRAINT `fk_ur_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ur_rol` FOREIGN KEY (`rol_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
+  INDEX `idx_ur_usuario` (`usuario_id`),
+  INDEX `idx_ur_rol` (`rol_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================

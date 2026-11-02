@@ -65,6 +65,7 @@ export const AdminUsersPage: React.FC = () => {
   const [formCargo, setFormCargo] = useState('');
   const [formPassword, setFormPassword] = useState('');
   const [formRolId, setFormRolId] = useState(3); // Default Técnico
+  const [formRolesIds, setFormRolesIds] = useState<number[]>([3]);
   const [formDependencia, setFormDependencia] = useState(UNALM_DEPENDENCIAS[0]);
   const [formTelefono, setFormTelefono] = useState('');
   const [formAnexo, setFormAnexo] = useState('');
@@ -155,6 +156,7 @@ export const AdminUsersPage: React.FC = () => {
     setFormCargo('');
     setFormPassword('');
     setFormRolId(3);
+    setFormRolesIds([3]);
     setFormDependencia('OTIC - Soporte Técnico');
     setFormTelefono('');
     setFormAnexo('');
@@ -164,6 +166,22 @@ export const AdminUsersPage: React.FC = () => {
     setRemovePhotoFlag(false);
     setErrorMsg(null);
     setIsCreateModalOpen(true);
+  };
+
+  const handleToggleRoleSelection = (rid: number) => {
+    setFormRolesIds((prev) => {
+      let next: number[];
+      if (prev.includes(rid)) {
+        if (prev.length <= 1) return prev;
+        next = prev.filter((id) => id !== rid);
+        if (formRolId === rid && next.length > 0) {
+          setFormRolId(next[0]);
+        }
+      } else {
+        next = [...prev, rid];
+      }
+      return next;
+    });
   };
 
   const handleOpenEditModal = (user: UserAdmin) => {
@@ -184,7 +202,12 @@ export const AdminUsersPage: React.FC = () => {
       ESPECIALISTA_REDES: 9,
       ESPECIALISTA_DESARROLLO: 10,
     };
-    setFormRolId(user.rolId || roleMapping[user.rol] || 3);
+    const primaryRid = user.rolId || roleMapping[user.rol] || 3;
+    setFormRolId(primaryRid);
+    const userRoleIds: number[] = user.rolesIds && user.rolesIds.length > 0
+      ? user.rolesIds
+      : [primaryRid];
+    setFormRolesIds(userRoleIds.length > 0 ? userRoleIds : [primaryRid]);
     setFormDependencia(user.facultadDependencia);
     setFormTelefono(user.telefono || '');
     setFormAnexo(user.anexo || '');
@@ -230,6 +253,7 @@ export const AdminUsersPage: React.FC = () => {
         email: formEmail,
         password: formPassword,
         rolId: formRolId,
+        rolesIds: formRolesIds.includes(formRolId) ? formRolesIds : [...formRolesIds, formRolId],
         facultadDependencia: formDependencia,
         cargo: formCargo,
         telefono: phoneValidation.cleanNumber || formTelefono.trim(),
@@ -276,6 +300,7 @@ export const AdminUsersPage: React.FC = () => {
         apellidos: formApellidos,
         email: formEmail,
         rolId: formRolId,
+        rolesIds: formRolesIds.includes(formRolId) ? formRolesIds : [...formRolesIds, formRolId],
         facultadDependencia: formDependencia,
         cargo: formCargo,
         telefono: phoneValidation.cleanNumber || formTelefono.trim(),
@@ -536,9 +561,29 @@ export const AdminUsersPage: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3 px-3">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${roleBadge.color}`}>
-                          {roleBadge.nombre}
-                        </span>
+                        <div className="flex flex-wrap gap-1 max-w-[220px]">
+                          {(() => {
+                            const userRoleIds = u.rolesIds && u.rolesIds.length > 0 
+                              ? u.rolesIds 
+                              : [u.rolId || 4];
+                            return userRoleIds.map((rid) => {
+                              const rInfo = ROLES_INFO[rid] || ROLES_INFO[4];
+                              const isPrimary = rid === u.rolId;
+                              return (
+                                <span
+                                  key={rid}
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${rInfo.color} ${
+                                    isPrimary ? 'ring-1 ring-slate-400/50 shadow-2xs font-black' : 'opacity-90'
+                                  }`}
+                                  title={isPrimary ? `${rInfo.nombre} (Rol Principal)` : rInfo.nombre}
+                                >
+                                  {rInfo.nombre.split(' (')[0]}
+                                  {isPrimary && <span className="ml-1 text-[8px] text-amber-600 font-bold">★</span>}
+                                </span>
+                              );
+                            });
+                          })()}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         {isDependenciaMissing ? (
@@ -673,9 +718,27 @@ export const AdminUsersPage: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${roleBadge.color}`}>
-                      {roleBadge.nombre}
-                    </span>
+                    {(() => {
+                      const userRoleIds = u.rolesIds && u.rolesIds.length > 0 
+                        ? u.rolesIds 
+                        : [u.rolId || 4];
+                      return userRoleIds.map((rid) => {
+                        const rInfo = ROLES_INFO[rid] || ROLES_INFO[4];
+                        const isPrimary = rid === u.rolId;
+                        return (
+                          <span
+                            key={rid}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${rInfo.color} ${
+                              isPrimary ? 'ring-1 ring-slate-400/50 shadow-2xs font-black' : 'opacity-90'
+                            }`}
+                            title={isPrimary ? `${rInfo.nombre} (Rol Principal)` : rInfo.nombre}
+                          >
+                            {rInfo.nombre.split(' (')[0]}
+                            {isPrimary && <span className="ml-1 text-[8px] text-amber-600 font-bold">★</span>}
+                          </span>
+                        );
+                      });
+                    })()}
                     {isTech && (
                       <button
                         onClick={() => {
@@ -873,10 +936,16 @@ export const AdminUsersPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Rol Asignado *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Rol Principal *</label>
               <select
                 value={formRolId}
-                onChange={(e) => setFormRolId(Number(e.target.value))}
+                onChange={(e) => {
+                  const newRid = Number(e.target.value);
+                  setFormRolId(newRid);
+                  if (!formRolesIds.includes(newRid)) {
+                    setFormRolesIds((prev) => [...prev, newRid]);
+                  }
+                }}
                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold"
               >
                 <option value={1}>Administrador General</option>
@@ -947,6 +1016,52 @@ export const AdminUsersPage: React.FC = () => {
               theme="light"
               required
             />
+          </div>
+
+          {/* Selector de Roles Múltiples (Multi-Rol RBAC) */}
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                <Shield className="w-3.5 h-3.5 text-unalm-600" />
+                <span>Asignación de Roles Múltiples (Permisos Simultáneos)</span>
+              </label>
+              <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">
+                {formRolesIds.length} rol(es)
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Active los roles que el usuario podrá ejercer simultáneamente (ej. Mesa de Ayuda y Soporte Técnico):
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+              {Object.entries(ROLES_INFO).map(([idStr, rInfo]) => {
+                const rid = Number(idStr);
+                const isChecked = formRolesIds.includes(rid);
+                const isPrimary = formRolId === rid;
+                return (
+                  <label
+                    key={rid}
+                    className={`flex items-center space-x-2 p-2 rounded-xl border text-xs cursor-pointer transition-all ${
+                      isChecked
+                        ? 'bg-white border-unalm-500 shadow-2xs text-slate-900 font-semibold'
+                        : 'bg-white/60 border-slate-200 text-slate-600 hover:bg-white'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleToggleRoleSelection(rid)}
+                      className="rounded text-unalm-600 focus:ring-unalm-500 h-3.5 w-3.5 border-slate-300"
+                    />
+                    <span className="truncate flex-1">{rInfo.nombre.split(' (')[0]}</span>
+                    {isPrimary && (
+                      <span className="text-[9px] px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded font-black border border-amber-300 shrink-0">
+                        Principal
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           <div>
@@ -1119,10 +1234,16 @@ export const AdminUsersPage: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Rol en el Sistema *</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Rol Principal *</label>
                 <select
                   value={formRolId}
-                  onChange={(e) => setFormRolId(Number(e.target.value))}
+                  onChange={(e) => {
+                    const newRid = Number(e.target.value);
+                    setFormRolId(newRid);
+                    if (!formRolesIds.includes(newRid)) {
+                      setFormRolesIds((prev) => [...prev, newRid]);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold"
                 >
                   <option value={1}>Administrador General</option>
@@ -1138,7 +1259,6 @@ export const AdminUsersPage: React.FC = () => {
                 </select>
               </div>
 
-
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Estado de Cuenta</label>
                 <select
@@ -1150,6 +1270,52 @@ export const AdminUsersPage: React.FC = () => {
                   <option value="INACTIVO">INACTIVO</option>
                   <option value="BLOQUEADO">BLOQUEADO</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Selector de Roles Múltiples (Multi-Rol RBAC) */}
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center space-x-1.5">
+                  <Shield className="w-3.5 h-3.5 text-unalm-600" />
+                  <span>Roles Asignados (Permisos Simultáneos Multi-Rol)</span>
+                </label>
+                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">
+                  {formRolesIds.length} rol(es)
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Seleccione todos los roles que este usuario puede ejercer (ej. Mesa de Ayuda + Soporte Técnico):
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                {Object.entries(ROLES_INFO).map(([idStr, rInfo]) => {
+                  const rid = Number(idStr);
+                  const isChecked = formRolesIds.includes(rid);
+                  const isPrimary = formRolId === rid;
+                  return (
+                    <label
+                      key={rid}
+                      className={`flex items-center space-x-2 p-2 rounded-xl border text-xs cursor-pointer transition-all ${
+                        isChecked
+                          ? 'bg-white border-unalm-500 shadow-2xs text-slate-900 font-semibold'
+                          : 'bg-white/60 border-slate-200 text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleRoleSelection(rid)}
+                        className="rounded text-unalm-600 focus:ring-unalm-500 h-3.5 w-3.5 border-slate-300"
+                      />
+                      <span className="truncate flex-1">{rInfo.nombre.split(' (')[0]}</span>
+                      {isPrimary && (
+                        <span className="text-[9px] px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded font-black border border-amber-300 shrink-0">
+                          Principal
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             </div>
 

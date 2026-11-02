@@ -263,12 +263,33 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           </div>
 
           <div>
-            <h3 className="text-base font-extrabold text-slate-900">
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
               {profileData?.nombres || user?.nombres} {profileData?.apellidos || user?.apellidos}
             </h3>
-            <span className="text-xs font-bold text-unalm-700 bg-unalm-50 border border-unalm-200 px-3 py-0.5 rounded-full mt-1 inline-block">
-              {profileData?.rolNombre || user?.rolNombre || user?.rol}
-            </span>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-1.5">
+              {((profileData?.roles && profileData.roles.length > 0) ? profileData.roles : (user?.roles && user.roles.length > 0 ? user.roles : (user?.rol ? [user.rol] : []))).map((r: any) => {
+                const roleLabels: Record<string, string> = {
+                  ADMIN: 'Administrador General',
+                  SUPERVISOR: 'Supervisor OTIC',
+                  MESA_AYUDA: 'Mesa de Ayuda OTIC',
+                  TECNICO: 'Soporte Técnico',
+                  ESPECIALISTA_REDES: 'Redes y Telecomunicaciones',
+                  ESPECIALISTA_DESARROLLO: 'Desarrollo TI',
+                  SUPERVISOR_SG: 'Supervisor Serv. Generales',
+                  MESA_AYUDA_SG: 'Mesa Serv. Generales',
+                  TECNICO_SG: 'Técnico Serv. Generales',
+                  SOLICITANTE: 'Usuario Solicitante UNALM',
+                };
+                return (
+                  <span
+                    key={r}
+                    className="text-xs font-extrabold text-unalm-800 dark:text-emerald-300 bg-unalm-50 dark:bg-slate-800 border border-unalm-200 dark:border-emerald-600/40 px-3 py-0.5 rounded-full shadow-2xs"
+                  >
+                    {roleLabels[r] || r}
+                  </span>
+                );
+              })}
+            </div>
           </div>
 
           {file && (

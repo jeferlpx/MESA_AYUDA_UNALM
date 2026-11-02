@@ -211,6 +211,19 @@
   background: #94a3b8;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
 /* Utilidades para ocultar barras de desplazamiento manteniendo funcionalidad táctil */
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;

@@ -2,16 +2,111 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="./favicon.png" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Sistema In-House de Mesa de Ayuda OTIC - Universidad Nacional Agraria La Molina (UNALM). Gestión de incidentes y requerimientos alineados a ITIL v4." />
-    <title>Mesa de Ayuda - OTIC UNALM</title>
+
+    <!-- Título Primario optimizado para búsquedas en Google -->
+    <title>Mesa de Ayuda UNALM | Soporte Técnico y Servicios Informáticos OTIC</title>
+
+    <!-- Meta Tags Esenciales para Indexación y Motores de Búsqueda -->
+    <meta name="description" content="Portal oficial de Mesa de Ayuda de la Universidad Nacional Agraria La Molina (UNALM) - Oficina de Tecnologías de la Información y Comunicaciones (OTIC). Soporte técnico informático, infraestructura tecnológica, cuentas de usuario en Directorio Activo y atención a la comunidad universitaria." />
+    <meta name="keywords" content="Mesa de Ayuda UNALM, mesa de ayuda unalm, OTIC UNALM, Soporte Tecnico UNALM, Universidad Nacional Agraria La Molina, Helpdesk UNALM, Directorio Activo UNALM, Servicios Generales UNALM, Requerimientos OTIC, Atencion a Usuarios UNALM" />
+    <meta name="author" content="Oficina de Tecnologías de la Información y Comunicaciones (OTIC) - UNALM" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <meta name="theme-color" content="#006837" />
+
+    <!-- Canonical URL Institucional -->
+    <link rel="canonical" href="https://mesadeayuda.lamolina.edu.pe/" />
+
+    <!-- Favicon e Iconos -->
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./escudo-color.png" />
+
+    <!-- Open Graph / Redes Sociales (Facebook, WhatsApp, LinkedIn, Telegram) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mesadeayuda.lamolina.edu.pe/" />
+    <meta property="og:title" content="Mesa de Ayuda UNALM - Portal Oficial OTIC" />
+    <meta property="og:description" content="Portal de atención técnica, soporte informático y requerimientos institucionales de la Universidad Nacional Agraria La Molina." />
+    <meta property="og:image" content="https://mesadeayuda.lamolina.edu.pe/escudo-color.png" />
+    <meta property="og:image:alt" content="Escudo de la Universidad Nacional Agraria La Molina" />
+    <meta property="og:locale" content="es_PE" />
+    <meta property="og:site_name" content="Mesa de Ayuda UNALM" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://mesadeayuda.lamolina.edu.pe/" />
+    <meta name="twitter:title" content="Mesa de Ayuda UNALM | Soporte Técnico OTIC" />
+    <meta name="twitter:description" content="Portal oficial de atención de incidencias y soporte técnico de la Universidad Nacional Agraria La Molina." />
+    <meta name="twitter:image" content="https://mesadeayuda.lamolina.edu.pe/escudo-color.png" />
+
+    <!-- Schema.org JSON-LD (Rich Snippets y Entidad Institucional en Google) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "GovernmentService",
+          "@id": "https://mesadeayuda.lamolina.edu.pe/#service",
+          "name": "Mesa de Ayuda UNALM - Soporte Técnico OTIC",
+          "serviceType": "Soporte Técnico de Tecnologías de la Información y Servicios Generales",
+          "url": "https://mesadeayuda.lamolina.edu.pe/",
+          "description": "Sistema oficial de atención, registro y seguimiento de incidencias informáticas, soporte técnico a usuarios, cuentas institucionales y mantenimiento de infraestructura tecnológica para la comunidad de la Universidad Nacional Agraria La Molina.",
+          "provider": {
+            "@type": "CollegeOrUniversity",
+            "@id": "https://www.lamolina.edu.pe/#university",
+            "name": "Universidad Nacional Agraria La Molina",
+            "alternateName": "UNALM",
+            "url": "https://www.lamolina.edu.pe",
+            "logo": "https://mesadeayuda.lamolina.edu.pe/escudo-color.png",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "Av. La Molina s/n",
+              "addressLocality": "La Molina",
+              "addressRegion": "Lima",
+              "postalCode": "15024",
+              "addressCountry": "PE"
+            }
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://mesadeayuda.lamolina.edu.pe/#website",
+          "url": "https://mesadeayuda.lamolina.edu.pe/",
+          "name": "Mesa de Ayuda UNALM",
+          "description": "Portal Institucional de Mesa de Ayuda OTIC - Universidad Nacional Agraria La Molina",
+          "inLanguage": "es-PE"
+        }
+      ]
+    }
+    </script>
+
     <!-- Font Google Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   </head>
   <body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-unalm-600 selection:text-white">
+    <!-- Contenido semántico para indexación por motores de búsqueda y accesibilidad sin JS -->
+    <noscript>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 2.5rem 1.5rem; max-width: 820px; margin: 0 auto; color: #0f172a; line-height: 1.6;">
+        <h1 style="color: #006837; font-size: 1.85rem; font-weight: 800; margin-bottom: 0.75rem;">Mesa de Ayuda UNALM — Oficina de Tecnologías de la Información y Comunicaciones (OTIC)</h1>
+        <p style="font-size: 1rem; color: #334155;">Bienvenido al portal oficial de <strong>Mesa de Ayuda de la Universidad Nacional Agraria La Molina (UNALM)</strong>.</p>
+        <p style="color: #475569;">Este sistema centraliza la gestión y resolución de solicitudes y requerimientos técnicos alineados al estándar internacional ITIL v4 y al Reglamento de Organización y Funciones (ROF) de la UNALM:</p>
+        <ul style="color: #1e293b; padding-left: 1.5rem; margin: 1rem 0;">
+          <li><strong>Soporte Técnico de TI:</strong> Reparación de hardware, soporte de software institucional, mantenimiento de redes cableadas e inalámbricas Wi-Fi campus.</li>
+          <li><strong>Directorio Activo y Cuentas:</strong> Gestión de correos institucionales (@lamolina.edu.pe), credenciales de acceso institucional y autenticación centralizada.</li>
+          <li><strong>Mantenimiento y Servicios Generales:</strong> Órdenes de trabajo, inventario técnico e inspecciones preventivas SIGI.</li>
+          <li><strong>Trazabilidad y Calidad:</strong> Consulta de estado de requerimientos en tiempo real y encuestas de satisfacción de servicio.</li>
+        </ul>
+        <p style="color: #64748b; font-size: 0.875rem;">Para acceder a la plataforma interactiva, por favor habilite JavaScript en su navegador web o comuníquese directamente con la OTIC al correo institucional <strong>redes@lamolina.edu.pe</strong>.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 1.5rem 0;" />
+        <footer style="font-size: 0.75rem; color: #94a3b8;">
+          © 2026 Universidad Nacional Agraria La Molina (UNALM). Av. La Molina s/n, Lima 12, Perú. Todos los derechos reservados.
+        </footer>
+      </div>
+    </noscript>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

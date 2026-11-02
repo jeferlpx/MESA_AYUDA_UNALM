@@ -2,6 +2,41 @@ import { dbPool } from '../config/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { UserDB, RoleCode, ModuleArea } from '../types';
 
+function parseUserRow(row: any): UserDB {
+  let roles: RoleCode[] = [];
+  let roles_ids: number[] = [];
+
+  if (row.roles_codigos) {
+    roles = String(row.roles_codigos)
+      .split(',')
+      .map((s) => s.trim() as RoleCode)
+      .filter(Boolean);
+  }
+  if (row.roles_ids_str) {
+    roles_ids = String(row.roles_ids_str)
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n));
+  }
+
+  // Asegurar que el rol principal esté presente en las listas
+  if (row.rol_codigo && !roles.includes(row.rol_codigo)) {
+    roles.unshift(row.rol_codigo);
+  }
+  if (row.rol_id && !roles_ids.includes(row.rol_id)) {
+    roles_ids.unshift(row.rol_id);
+  }
+
+  return {
+    ...row,
+    roles,
+    roles_ids,
+    promedio_calificacion: row.promedio_calificacion !== undefined && row.promedio_calificacion !== null ? Number(row.promedio_calificacion) : 5.0,
+    total_calificaciones: Number(row.total_calificaciones || 0),
+    total_resueltos: Number(row.total_resueltos || 0),
+  } as UserDB;
+}
+
 export class UserModel {
   static async findByEmail(email: string): Promise<UserDB | null> {
     const cleanEmail = email.toLowerCase().trim();
@@ -23,7 +58,14 @@ export class UserModel {
     }
 
     const [rows] = await dbPool.query<RowDataPacket[]>(
-      `SELECT u.*, r.codigo as rol_codigo, r.nombre as rol_nombre
+      `SELECT u.*, r.codigo as rol_codigo, r.nombre as rol_nombre,
+              (SELECT GROUP_CONCAT(r2.codigo SEPARATOR ',') 
+               FROM usuario_roles ur 
+               JOIN roles r2 ON ur.rol_id = r2.id 
+               WHERE ur.usuario_id = u.id) as roles_codigos,
+              (SELECT GROUP_CONCAT(ur.rol_id SEPARATOR ',') 
+               FROM usuario_roles ur 
+               WHERE ur.usuario_id = u.id) as roles_ids_str
        FROM usuarios u
        INNER JOIN roles r ON u.rol_id = r.id
        WHERE (u.email IN (?) OR LOWER(TRIM(CONCAT(u.nombres, ' ', u.apellidos))) = ? OR LOWER(TRIM(u.nombres)) = ?) 
@@ -33,7 +75,7 @@ export class UserModel {
     );
 
     if (rows.length === 0) return null;
-    return rows[0] as UserDB;
+    return parseUserRow(rows[0]);
   }
 
   static async findById(id: number): Promise<UserDB | null> {
@@ -41,6 +83,13 @@ export class UserModel {
       `SELECT u.id, u.nombres, u.apellidos, u.email, u.rol_id, u.cargo, u.debe_cambiar_password, u.correo_pendiente,
               u.facultad_dependencia, u.ubicacion_referencia, u.telefono, u.anexo, u.foto_perfil, u.estado, u.ultimo_acceso, u.creado_en,
               r.codigo as rol_codigo, r.nombre as rol_nombre,
+              (SELECT GROUP_CONCAT(r2.codigo SEPARATOR ',') 
+               FROM usuario_roles ur 
+               JOIN roles r2 ON ur.rol_id = r2.id 
+               WHERE ur.usuario_id = u.id) as roles_codigos,
+              (SELECT GROUP_CONCAT(ur.rol_id SEPARATOR ',') 
+               FROM usuario_roles ur 
+               WHERE ur.usuario_id = u.id) as roles_ids_str,
               COALESCE((SELECT ROUND(AVG(e.puntuacion), 1) FROM encuestas_satisfaccion e JOIN tickets t ON e.ticket_id = t.id WHERE t.tecnico_id = u.id), 5.0) as promedio_calificacion,
               (SELECT COUNT(e.id) FROM encuestas_satisfaccion e JOIN tickets t ON e.ticket_id = t.id WHERE t.tecnico_id = u.id) as total_calificaciones,
               (SELECT COUNT(t.id) FROM tickets t WHERE t.tecnico_id = u.id AND t.estado = 'RESUELTO') as total_resueltos
@@ -51,13 +100,7 @@ export class UserModel {
     );
 
     if (rows.length === 0) return null;
-    const row = rows[0];
-    return {
-      ...row,
-      promedio_calificacion: row.promedio_calificacion !== null ? Number(row.promedio_calificacion) : 5.0,
-      total_calificaciones: Number(row.total_calificaciones || 0),
-      total_resueltos: Number(row.total_resueltos || 0),
-    } as UserDB;
+    return parseUserRow(rows[0]);
   }
 
   static async findAllTechnicians(modulo?: ModuleArea): Promise<UserDB[]> {
@@ -69,21 +112,30 @@ export class UserModel {
     }
 
     const [rows] = await dbPool.query<RowDataPacket[]>(
-      `SELECT u.id, u.nombres, u.apellidos, u.email, u.facultad_dependencia, u.cargo, u.telefono, u.anexo, u.foto_perfil, r.codigo as rol_codigo, r.nombre as rol_nombre,
+      `SELECT DISTINCT u.id, u.nombres, u.apellidos, u.email, u.facultad_dependencia, u.cargo, u.telefono, u.anexo, u.foto_perfil, r.codigo as rol_codigo, r.nombre as rol_nombre,
+              (SELECT GROUP_CONCAT(r2.codigo SEPARATOR ',') 
+               FROM usuario_roles ur 
+               JOIN roles r2 ON ur.rol_id = r2.id 
+               WHERE ur.usuario_id = u.id) as roles_codigos,
+              (SELECT GROUP_CONCAT(ur.rol_id SEPARATOR ',') 
+               FROM usuario_roles ur 
+               WHERE ur.usuario_id = u.id) as roles_ids_str,
               COALESCE((SELECT ROUND(AVG(e.puntuacion), 1) FROM encuestas_satisfaccion e JOIN tickets t ON e.ticket_id = t.id WHERE t.tecnico_id = u.id), 5.0) as promedio_calificacion,
               (SELECT COUNT(e.id) FROM encuestas_satisfaccion e JOIN tickets t ON e.ticket_id = t.id WHERE t.tecnico_id = u.id) as total_calificaciones,
               (SELECT COUNT(t.id) FROM tickets t WHERE t.tecnico_id = u.id AND t.estado = 'RESUELTO') as total_resueltos
        FROM usuarios u
        INNER JOIN roles r ON u.rol_id = r.id
-       WHERE r.codigo IN ${rolesCondition} AND u.estado = 'ACTIVO'
+       WHERE (
+         r.codigo IN ${rolesCondition}
+         OR EXISTS (
+           SELECT 1 FROM usuario_roles ur2 
+           JOIN roles r3 ON ur2.rol_id = r3.id 
+           WHERE ur2.usuario_id = u.id AND r3.codigo IN ${rolesCondition}
+         )
+       ) AND u.estado = 'ACTIVO'
        ORDER BY u.nombres ASC`
     );
-    return rows.map((r) => ({
-      ...r,
-      promedio_calificacion: r.promedio_calificacion !== null ? Number(r.promedio_calificacion) : 5.0,
-      total_calificaciones: Number(r.total_calificaciones || 0),
-      total_resueltos: Number(r.total_resueltos || 0),
-    })) as UserDB[];
+    return rows.map((r) => parseUserRow(r));
   }
 
   static async updateLastLogin(userId: number): Promise<void> {
@@ -125,6 +177,7 @@ export class UserModel {
     email: string;
     passwordHash: string;
     rolId: number;
+    rolesIds?: number[];
     facultadDependencia: string;
     cargo?: string;
     telefono?: string;
@@ -147,7 +200,26 @@ export class UserModel {
         data.fotoPerfil || null,
       ]
     );
-    return result.insertId;
+    const userId = result.insertId;
+
+    // Sincronizar roles asignados en usuario_roles
+    const roleIdsToAssign = new Set<number>();
+    if (data.rolId) roleIdsToAssign.add(Number(data.rolId));
+    if (Array.isArray(data.rolesIds)) {
+      data.rolesIds.forEach((rid) => {
+        const parsed = Number(rid);
+        if (!isNaN(parsed) && parsed > 0) roleIdsToAssign.add(parsed);
+      });
+    }
+
+    for (const rid of roleIdsToAssign) {
+      await dbPool.query(
+        `INSERT IGNORE INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)`,
+        [userId, rid]
+      );
+    }
+
+    return userId;
   }
 
   static async findAll(filters?: {
@@ -159,6 +231,13 @@ export class UserModel {
       SELECT u.id, u.nombres, u.apellidos, u.email, u.rol_id, u.cargo, u.debe_cambiar_password, u.correo_pendiente,
              u.facultad_dependencia, u.telefono, u.anexo, u.foto_perfil, u.estado, u.ultimo_acceso, u.creado_en,
              r.codigo as rol_codigo, r.nombre as rol_nombre,
+             (SELECT GROUP_CONCAT(r2.codigo SEPARATOR ',') 
+              FROM usuario_roles ur 
+              JOIN roles r2 ON ur.rol_id = r2.id 
+              WHERE ur.usuario_id = u.id) as roles_codigos,
+             (SELECT GROUP_CONCAT(ur.rol_id SEPARATOR ',') 
+              FROM usuario_roles ur 
+              WHERE ur.usuario_id = u.id) as roles_ids_str,
              COALESCE((SELECT ROUND(AVG(e.puntuacion), 1) FROM encuestas_satisfaccion e JOIN tickets t ON e.ticket_id = t.id WHERE t.tecnico_id = u.id), 5.0) as promedio_calificacion,
              (SELECT COUNT(e.id) FROM encuestas_satisfaccion e JOIN tickets t ON e.ticket_id = t.id WHERE t.tecnico_id = u.id) as total_calificaciones,
              (SELECT COUNT(t.id) FROM tickets t WHERE t.tecnico_id = u.id AND t.estado = 'RESUELTO') as total_resueltos
@@ -169,8 +248,8 @@ export class UserModel {
     const params: any[] = [];
 
     if (filters?.rolId) {
-      sql += ` AND u.rol_id = ?`;
-      params.push(filters.rolId);
+      sql += ` AND (u.rol_id = ? OR EXISTS (SELECT 1 FROM usuario_roles ur WHERE ur.usuario_id = u.id AND ur.rol_id = ?))`;
+      params.push(filters.rolId, filters.rolId);
     }
 
     if (filters?.estado) {
@@ -187,12 +266,7 @@ export class UserModel {
     sql += ` ORDER BY u.id DESC`;
 
     const [rows] = await dbPool.query<RowDataPacket[]>(sql, params);
-    return rows.map((r) => ({
-      ...r,
-      promedio_calificacion: r.promedio_calificacion !== null ? Number(r.promedio_calificacion) : 5.0,
-      total_calificaciones: Number(r.total_calificaciones || 0),
-      total_resueltos: Number(r.total_resueltos || 0),
-    })) as UserDB[];
+    return rows.map((r) => parseUserRow(r));
   }
 
   static async updateUser(id: number, data: {
@@ -200,6 +274,7 @@ export class UserModel {
     apellidos: string;
     email: string;
     rolId: number;
+    rolesIds?: number[];
     facultadDependencia: string;
     cargo?: string;
     telefono?: string;
@@ -227,6 +302,30 @@ export class UserModel {
         id,
       ]
     );
+
+    // Actualizar usuario_roles si se proporcionó rolesIds
+    if (Array.isArray(data.rolesIds)) {
+      await dbPool.query(`DELETE FROM usuario_roles WHERE usuario_id = ?`, [id]);
+      const roleIdsToAssign = new Set<number>();
+      if (data.rolId) roleIdsToAssign.add(Number(data.rolId));
+      data.rolesIds.forEach((rid) => {
+        const parsed = Number(rid);
+        if (!isNaN(parsed) && parsed > 0) roleIdsToAssign.add(parsed);
+      });
+
+      for (const rid of roleIdsToAssign) {
+        await dbPool.query(
+          `INSERT IGNORE INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)`,
+          [id, rid]
+        );
+      }
+    } else {
+      // Al menos asegurar que su rol_id principal esté en usuario_roles
+      await dbPool.query(
+        `INSERT IGNORE INTO usuario_roles (usuario_id, rol_id) VALUES (?, ?)`,
+        [id, data.rolId]
+      );
+    }
   }
 
   static async updatePassword(id: number, passwordHash: string): Promise<void> {

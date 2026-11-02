@@ -10,10 +10,25 @@ interface NavbarProps {
   isMobileMenuOpen?: boolean;
 }
 
+const ROLE_CONFIG: Record<string, { label: string; badgeClass: string }> = {
+  ADMIN: { label: 'Admin', badgeClass: 'bg-amber-400/25 text-amber-200 border-amber-300/40 shadow-xs' },
+  SUPERVISOR: { label: 'Supervisor OTIC', badgeClass: 'bg-purple-400/25 text-purple-200 border-purple-300/40 shadow-xs' },
+  MESA_AYUDA: { label: 'Mesa de Ayuda', badgeClass: 'bg-cyan-400/25 text-cyan-200 border-cyan-300/40 shadow-xs' },
+  TECNICO: { label: 'Soporte Técnico', badgeClass: 'bg-emerald-400/25 text-emerald-200 border-emerald-300/40 shadow-xs' },
+  ESPECIALISTA_REDES: { label: 'Redes y Telecom', badgeClass: 'bg-blue-400/25 text-blue-200 border-blue-300/40 shadow-xs' },
+  ESPECIALISTA_DESARROLLO: { label: 'Desarrollo TI', badgeClass: 'bg-indigo-400/25 text-indigo-200 border-indigo-300/40 shadow-xs' },
+  SUPERVISOR_SG: { label: 'Supervisor SG', badgeClass: 'bg-teal-400/25 text-teal-200 border-teal-300/40 shadow-xs' },
+  MESA_AYUDA_SG: { label: 'Mesa SG', badgeClass: 'bg-sky-400/25 text-sky-200 border-sky-300/40 shadow-xs' },
+  TECNICO_SG: { label: 'Técnico SG', badgeClass: 'bg-teal-400/25 text-teal-200 border-teal-300/40 shadow-xs' },
+  SOLICITANTE: { label: 'Solicitante', badgeClass: 'bg-slate-400/25 text-slate-200 border-slate-300/40 shadow-xs' },
+};
+
 export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const activeRoles = user?.roles && user.roles.length > 0 ? user.roles : (user?.rol ? [user.rol] : []);
 
   return (
     <>
@@ -74,18 +89,31 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
                   className="flex items-center space-x-2 sm:space-x-3 p-1 sm:p-1.5 pr-2.5 rounded-2xl hover:bg-white/10 dark:hover:bg-slate-800/80 transition-all duration-200 text-left group cursor-pointer border border-transparent hover:border-white/10"
                   title="Ver y editar mi perfil / foto"
                 >
-                  <div className="hidden md:flex flex-col text-right">
-                    <span className="text-sm font-bold text-white group-hover:text-amber-200 transition-colors">
-                      {user.nombres} {user.apellidos}
-                    </span>
-                    <span
-                      className="text-[11px] text-unalm-200 dark:text-slate-400 truncate max-w-[260px] lg:max-w-[340px] block"
-                      title={`${user.facultadDependencia || 'UNALM'} (${user.rol === 'MESA_AYUDA' ? 'MESA DE AYUDA' : user.rol})`}
-                    >
-                      {user.facultadDependencia || 'Comunidad Universitaria UNALM'} •{' '}
-                      <span className="uppercase font-black text-amber-300">
-                        {user.rol === 'MESA_AYUDA' ? 'MESA DE AYUDA' : user.rol}
+                  <div className="hidden md:flex flex-col text-right items-end justify-center">
+                    <div className="flex items-center space-x-1.5 justify-end">
+                      <span className="text-xs sm:text-sm font-bold text-white group-hover:text-amber-200 transition-colors">
+                        {user.nombres} {user.apellidos}
                       </span>
+                      <div className="flex items-center space-x-1">
+                        {activeRoles.map((r) => {
+                          const conf = ROLE_CONFIG[r] || { label: r, badgeClass: 'bg-white/10 text-white border-white/20' };
+                          return (
+                            <span
+                              key={r}
+                              className={`px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wide border uppercase ${conf.badgeClass}`}
+                              title={`Rol asignado: ${conf.label}`}
+                            >
+                              {conf.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <span
+                      className="text-[10px] text-emerald-200/90 dark:text-slate-400 truncate max-w-[260px] lg:max-w-[360px] block"
+                      title={user.facultadDependencia || 'Universidad Nacional Agraria La Molina'}
+                    >
+                      {user.facultadDependencia || 'Comunidad Universitaria UNALM'}
                     </span>
                   </div>
 

@@ -137,6 +137,29 @@ export async function runDatabaseMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // 5.2 Tabla para Múltiples Roles por Usuario (RBAC Multirole)
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS usuario_roles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        usuario_id INT NOT NULL,
+        rol_id INT NOT NULL,
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_usuario_rol (usuario_id, rol_id),
+        CONSTRAINT fk_ur_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE,
+        CONSTRAINT fk_ur_rol FOREIGN KEY (rol_id) REFERENCES roles (id) ON DELETE CASCADE,
+        INDEX idx_ur_usuario (usuario_id),
+        INDEX idx_ur_rol (rol_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Sincronizar roles existentes de cada usuario en usuario_roles
+    try {
+      await connection.query(`
+        INSERT IGNORE INTO usuario_roles (usuario_id, rol_id)
+        SELECT id, rol_id FROM usuarios WHERE rol_id IS NOT NULL
+      `);
+    } catch (e) {}
+
     // 6. Asegurar tabla encuestas_satisfaccion
     await connection.query(`
       CREATE TABLE IF NOT EXISTS encuestas_satisfaccion (

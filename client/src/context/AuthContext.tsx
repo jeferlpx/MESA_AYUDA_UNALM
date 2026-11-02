@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
+import { User, RoleCode } from '../types';
 import { api } from '../services/api';
 
 interface AuthContextType {
@@ -11,6 +11,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   updateUser: (updatedFields: Partial<User>) => void;
   isAuthenticated: boolean;
+  hasRole: (...roles: RoleCode[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +91,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const hasRole = (...rolesToCheck: RoleCode[]): boolean => {
+    if (!user) return false;
+    const userRoles: RoleCode[] = user.roles && user.roles.length > 0 ? user.roles : [user.rol];
+    return userRoles.some((r) => rolesToCheck.includes(r));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -101,6 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshUser,
         updateUser,
         isAuthenticated: !!user,
+        hasRole,
       }}
     >
       {children}

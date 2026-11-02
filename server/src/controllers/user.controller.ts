@@ -49,6 +49,8 @@ export class UserController {
           rolId: user.rol_id,
           rol: user.rol_codigo,
           rolNombre: user.rol_nombre,
+          roles: user.roles || [user.rol_codigo],
+          rolesIds: user.roles_ids || [user.rol_id],
           facultadDependencia: user.facultad_dependencia,
           ubicacionReferencia: user.ubicacion_referencia || '',
           telefono: user.telefono,
@@ -154,7 +156,7 @@ export class UserController {
 
   static async createUser(req: AuthenticatedRequest, res: Response) {
     try {
-      const { nombres, apellidos, email, password, rolId, facultadDependencia, cargo, telefono, anexo, fotoPerfil } = req.body;
+      const { nombres, apellidos, email, password, rolId, rolesIds, facultadDependencia, cargo, telefono, anexo, fotoPerfil } = req.body;
 
       if (!nombres || !apellidos || !email || !password || !rolId || !facultadDependencia) {
         return res.status(400).json({ success: false, message: 'Faltan campos obligatorios para registrar usuario' });
@@ -178,12 +180,15 @@ export class UserController {
 
       const passwordHash = await bcrypt.hash(password, 10);
 
+      const parsedRolesIds = Array.isArray(rolesIds) ? rolesIds.map((r: any) => parseInt(r, 10)).filter((r: number) => !isNaN(r)) : undefined;
+
       const userId = await UserModel.createUser({
         nombres,
         apellidos,
         email,
         passwordHash,
         rolId: parseInt(rolId, 10),
+        rolesIds: parsedRolesIds,
         facultadDependencia,
         cargo,
         telefono,
@@ -220,6 +225,8 @@ export class UserController {
           rolId: u.rol_id,
           rol: u.rol_codigo,
           rolNombre: u.rol_nombre,
+          roles: u.roles || [u.rol_codigo],
+          rolesIds: u.roles_ids || [u.rol_id],
           facultadDependencia: u.facultad_dependencia,
           cargo: u.cargo,
           debeCambiarPassword: Boolean(u.debe_cambiar_password),
@@ -257,6 +264,8 @@ export class UserController {
           rolId: user.rol_id,
           rol: user.rol_codigo,
           rolNombre: user.rol_nombre,
+          roles: user.roles || [user.rol_codigo],
+          rolesIds: user.roles_ids || [user.rol_id],
           facultadDependencia: user.facultad_dependencia,
           cargo: user.cargo,
           debeCambiarPassword: Boolean(user.debe_cambiar_password),
@@ -280,7 +289,7 @@ export class UserController {
   static async updateUser(req: AuthenticatedRequest, res: Response) {
     try {
       const id = parseInt(req.params.id, 10);
-      const { nombres, apellidos, email, rolId, facultadDependencia, cargo, telefono, anexo, fotoPerfil, estado } = req.body;
+      const { nombres, apellidos, email, rolId, rolesIds, facultadDependencia, cargo, telefono, anexo, fotoPerfil, estado } = req.body;
 
       const user = await UserModel.findById(id);
       if (!user) {
@@ -304,11 +313,14 @@ export class UserController {
         }
       }
 
+      const parsedRolesIds = Array.isArray(rolesIds) ? rolesIds.map((r: any) => parseInt(r, 10)).filter((r: number) => !isNaN(r)) : undefined;
+
       await UserModel.updateUser(id, {
         nombres: nombres || user.nombres,
         apellidos: apellidos || user.apellidos,
         email: email || user.email,
         rolId: rolId ? parseInt(rolId, 10) : user.rol_id,
+        rolesIds: parsedRolesIds,
         facultadDependencia: facultadDependencia || user.facultad_dependencia,
         cargo: cargo !== undefined ? cargo : user.cargo,
         telefono: cleanTelefono,

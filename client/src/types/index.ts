@@ -44,6 +44,8 @@ export interface User {
   rol: RoleCode;
   rolNombre: string;
   rolId?: number;
+  roles?: RoleCode[];
+  rolesIds?: number[];
   facultadDependencia: string;
   ubicacionReferencia?: string;
   cargo?: string;
@@ -63,6 +65,8 @@ export interface User {
 
 export interface UserAdmin extends User {
   rolId: number;
+  roles?: RoleCode[];
+  rolesIds?: number[];
   estado: 'ACTIVO' | 'INACTIVO' | 'BLOQUEADO';
   ultimoAcceso?: string;
   creadoEn: string;

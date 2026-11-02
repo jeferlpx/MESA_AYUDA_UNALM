@@ -51,6 +51,8 @@ export async function authenticateJWT(req: AuthenticatedRequest, res: Response, 
       ...decoded,
       rol: freshUser.rol_codigo,
       rol_id: freshUser.rol_id,
+      roles: freshUser.roles && freshUser.roles.length > 0 ? freshUser.roles : [freshUser.rol_codigo],
+      roles_ids: freshUser.roles_ids && freshUser.roles_ids.length > 0 ? freshUser.roles_ids : [freshUser.rol_id],
       nombres: freshUser.nombres,
       apellidos: freshUser.apellidos,
       facultad_dependencia: freshUser.facultad_dependencia,
@@ -75,10 +77,16 @@ export function authorizeRoles(...allowedRoles: RoleCode[]) {
       });
     }
 
-    if (!allowedRoles.includes(req.user.rol)) {
+    const userRoles: RoleCode[] = req.user.roles && req.user.roles.length > 0
+      ? req.user.roles
+      : [req.user.rol];
+
+    const hasPermission = userRoles.some((r) => allowedRoles.includes(r));
+
+    if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: `Acceso restringido: Se requiere rol [${allowedRoles.join(', ')}]. Su rol actual es [${req.user.rol}]`,
+        message: `Acceso restringido: Se requiere alguno de los roles [${allowedRoles.join(', ')}]. Sus roles asignados son [${userRoles.join(', ')}]`,
       });
     }
 

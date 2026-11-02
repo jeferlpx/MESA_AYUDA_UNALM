@@ -23,7 +23,7 @@ import { TopNavigationBar } from './components/TopNavigationBar';
 import { EquipmentLookupModal } from './components/EquipmentLookupModal';
 
 const MainLayout: React.FC = () => {
-  const { user, isAuthenticated, loading, updateUser } = useAuth();
+  const { user, isAuthenticated, loading, updateUser, hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('catalog');
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [selectedTicketCode, setSelectedTicketCode] = useState<string | null>(null);
@@ -33,18 +33,18 @@ const MainLayout: React.FC = () => {
 
   // Inicializar la pestaña según el perfil del usuario:
   useEffect(() => {
-    if (user?.rol) {
-      if (['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol)) {
+    if (user) {
+      if (hasRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG')) {
         setActiveTab('admin-dashboard');
-      } else if (user.rol === 'MESA_AYUDA_SG') {
+      } else if (hasRole('MESA_AYUDA_SG')) {
         setActiveTab('sg-dashboard');
-      } else if (['MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol)) {
+      } else if (hasRole('MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG')) {
         setActiveTab('specialist');
       } else {
         setActiveTab('catalog');
       }
     }
-  }, [user?.rol]);
+  }, [user, hasRole]);
 
   // Manejo de historial HTML5 para evitar que el usuario salga del sistema con la flecha Atrás
   useEffect(() => {
@@ -76,24 +76,24 @@ const MainLayout: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Guard de pestañas según rol del usuario para evitar 403 Forbidden
+  // Guard de pestañas según roles del usuario para evitar 403 Forbidden
   const safeActiveTab = useMemo(() => {
-    if (!user?.rol) return 'catalog';
-    if (['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol)) {
+    if (!user) return 'catalog';
+    if (hasRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG')) {
       return activeTab;
     }
-    if (user.rol === 'MESA_AYUDA_SG') {
+    if (hasRole('MESA_AYUDA_SG')) {
       const allowed = ['sg-dashboard', 'specialist', 'tech-attended', 'sg-work-orders', 'sg-inventory', 'infrastructure-inspections', 'admin-equipment', 'catalog', 'my-tickets', 'pending-surveys'];
       return allowed.includes(activeTab) ? activeTab : 'sg-dashboard';
     }
-    if (['MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol)) {
+    if (hasRole('MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG')) {
       const allowed = ['specialist', 'tech-attended', 'infrastructure-inspections', 'admin-equipment', 'catalog', 'my-tickets', 'pending-surveys'];
       return allowed.includes(activeTab) ? activeTab : 'specialist';
     }
     // SOLICITANTE
     const allowed = ['catalog', 'my-tickets', 'pending-surveys'];
     return allowed.includes(activeTab) ? activeTab : 'catalog';
-  }, [user?.rol, activeTab]);
+  }, [user, activeTab, hasRole]);
 
   if (loading) {
     return (

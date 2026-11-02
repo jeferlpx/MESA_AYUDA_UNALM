@@ -29,8 +29,8 @@ interface TechnicianAttendedTicketsPageProps {
 export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPageProps> = ({
   onSelectTicketDetail,
 }) => {
-  const { user } = useAuth();
-  const isTechRole = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol));
+  const { user, hasRole } = useAuth();
+  const isTechRole = hasRole('TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

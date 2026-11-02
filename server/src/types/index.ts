@@ -43,6 +43,8 @@ export interface UserTokenPayload {
   apellidos: string;
   rol: RoleCode;
   rol_id: number;
+  roles?: RoleCode[];
+  roles_ids?: number[];
   facultad_dependencia: string;
   cargo?: string;
   ubicacion_referencia?: string;
@@ -60,6 +62,9 @@ export interface UserDB {
   rol_id: number;
   rol_codigo: RoleCode;
   rol_nombre: string;
+  roles?: RoleCode[];
+  roles_ids?: number[];
+  roles_codigos?: string;
   facultad_dependencia: string;
   cargo?: string;
   debe_cambiar_password?: boolean | number;

@@ -1,0 +1,16 @@
+# ==============================================================================
+# ROBOTS.TXT - MESA DE AYUDA UNALM (OTIC)
+# Universidad Nacional Agraria La Molina
+# https://mesadeayuda.lamolina.edu.pe/
+# ==============================================================================
+
+User-agent: *
+Allow: /
+Allow: /favicon.png
+Allow: /escudo-color.png
+Disallow: /api/
+Disallow: /srv/
+Disallow: /uploads/
+
+# Sitemap de indexación pública
+Sitemap: https://mesadeayuda.lamolina.edu.pe/sitemap.xml

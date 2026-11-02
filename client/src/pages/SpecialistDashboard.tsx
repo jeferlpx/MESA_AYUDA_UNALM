@@ -56,20 +56,21 @@ interface SpecialistDashboardProps {
 }
 
 export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSelectTicketDetail }) => {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEquipmentCode, setSelectedEquipmentCode] = useState<string | null>(null);
 
-  const isSGUser = Boolean(user?.rol && ['MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG'].includes(user.rol));
-  const isMesaAyudaOrAdmin = Boolean(user?.rol && ['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol));
-  const isTechnicianOnly = Boolean(user?.rol && ['TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG'].includes(user.rol));
+  const isSGUser = hasRole('MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG');
+  const isMesaAyudaOrAdmin = hasRole('MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG');
+  const hasTechRole = hasRole('TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG');
+  const isTechnicianOnly = hasTechRole && !isMesaAyudaOrAdmin;
 
-  const userModule = isSGUser
+  const userModule = isSGUser && !hasRole('ADMIN', 'SUPERVISOR', 'MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO')
     ? 'SERVICIOS_GENERALES'
-    : (user?.rol && ['MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'SUPERVISOR'].includes(user.rol) ? 'OTIC' : undefined);
+    : (hasRole('MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'SUPERVISOR') ? 'OTIC' : undefined);
 
   // Queue Tabs: 'ALL', 'REPORTADO', 'ASIGNADO', 'RESUELTO', 'SIGI_PREVENTIVA'
   const [activeQueueTab, setActiveQueueTab] = useState<string>(isTechnicianOnly ? 'ASIGNADO' : 'REPORTADO');

@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   isMobileDrawer = false,
 }) => {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const [pendingSurveysCount, setPendingSurveysCount] = useState<number>(0);
 
   const handleTabClick = (tab: string) => {
@@ -69,25 +69,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [user?.id, activeTab]);
 
-  const isSpecialist =
-    user?.rol &&
-    [
-      'ADMIN',
-      'SUPERVISOR',
-      'SUPERVISOR_SG',
-      'TECNICO',
-      'ESPECIALISTA_REDES',
-      'ESPECIALISTA_DESARROLLO',
-      'TECNICO_SG',
-      'MESA_AYUDA',
-      'MESA_AYUDA_SG',
-    ].includes(user.rol);
-  const isAdmin = user?.rol && ['ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(user.rol);
-  const isMesaAyuda = user?.rol === 'MESA_AYUDA';
-  const isMesaAyudaSG = user?.rol === 'MESA_AYUDA_SG';
-  const isSGUser = user?.rol && ['MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG'].includes(user.rol);
+  const isSpecialist = hasRole(
+    'ADMIN',
+    'SUPERVISOR',
+    'SUPERVISOR_SG',
+    'TECNICO',
+    'ESPECIALISTA_REDES',
+    'ESPECIALISTA_DESARROLLO',
+    'TECNICO_SG',
+    'MESA_AYUDA',
+    'MESA_AYUDA_SG'
+  );
+  const isAdmin = hasRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG');
+  const isMesaAyuda = hasRole('MESA_AYUDA');
+  const isMesaAyudaSG = hasRole('MESA_AYUDA_SG');
+  const isSGUser = hasRole('MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG');
   // Acceso exclusivo a Matriz OCI e Inventario de Materiales: Admin General y Mesa de Ayuda SG
-  const canAccessSGManagement = user?.rol && ['ADMIN', 'MESA_AYUDA_SG'].includes(user.rol);
+  const canAccessSGManagement = hasRole('ADMIN', 'MESA_AYUDA_SG');
 
   return (
     <aside
