@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { api, getAssetUrl } from '../services/api';
 import { DashboardMetrics, AuditLog } from '../types';
 import { TechnicianProfileModal } from '../components/TechnicianProfileModal';
@@ -655,8 +656,11 @@ export const AdminDashboardPage: React.FC = () => {
       )}
 
       {/* DEDICATED OFFICIAL EXECUTIVE REPORT MODAL & PRINTABLE VIEW */}
-      {showExecutiveReportModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 print:p-0 print:bg-white print:static print:block printable-report-wrapper">
+      {showExecutiveReportModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 print:p-0 print:bg-white print:static print:block printable-report-wrapper"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+        >
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl overflow-hidden print:border-none print:shadow-none print:max-w-none print:w-full printable-report-card">
             {/* Top Toolbar in Modal (hidden when printing) */}
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between print:hidden">
@@ -889,7 +893,8 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Technician History Modal */}

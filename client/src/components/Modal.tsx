@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -45,10 +46,13 @@ export const Modal: React.FC<ModalProps> = ({
     '5xl': 'max-w-5xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/65 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+  const modalNode = (
+    <div
+      className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/70 dark:bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
       <div
-        className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 ring-1 ring-black/5 dark:ring-white/10 w-full ${maxWidthClasses[maxWidth]} transform transition-all overflow-hidden animate-in zoom-in-95 duration-200`}
+        className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 ring-1 ring-black/5 dark:ring-white/10 w-full ${maxWidthClasses[maxWidth]} transform transition-all overflow-hidden animate-in zoom-in-95 duration-200 my-auto`}
         role="dialog"
         aria-modal="true"
       >
@@ -75,4 +79,6 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 };

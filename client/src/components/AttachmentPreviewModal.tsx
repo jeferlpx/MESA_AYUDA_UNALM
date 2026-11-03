@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { getAssetUrl } from '../services/api';
 import { Attachment } from '../types';
 import {
@@ -87,8 +88,11 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200"
+      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
       {/* Top Bar Header */}
       <div className="flex items-center justify-between px-6 py-4 bg-slate-900/80 border-b border-slate-800 text-white select-none z-10">
         <div className="flex items-center space-x-3 truncate max-w-xl">
@@ -272,4 +276,6 @@ export const AttachmentPreviewModal: React.FC<AttachmentPreviewModalProps> = ({
       )}
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { api, getAssetUrl } from '../services/api';
 import { Ticket, TicketAdjunto, TicketHistorial, TicketComment, Technician, TicketComplejidad } from '../types';
 import { StatusBadge, UrgencyBadge, ComplexityBadge } from '../components/Badge';
@@ -1496,9 +1497,10 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
       )}
 
       {/* Lightbox Preview Modal for Images */}
-      {previewImage && (
+      {previewImage && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
           onClick={() => setPreviewImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
@@ -1515,7 +1517,8 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
               className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/20"
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Official SG Modals */}

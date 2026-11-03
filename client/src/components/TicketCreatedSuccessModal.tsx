@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle2, Ticket, Clock, FileText, Wrench } from 'lucide-react';
 import { UrgencyBadge } from './Badge';
 
@@ -44,8 +45,11 @@ export const TicketCreatedSuccessModal: React.FC<TicketCreatedSuccessModalProps>
 
   const isSG = ticketData.modulo === 'SERVICIOS_GENERALES';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-xs animate-in fade-in duration-200">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-md animate-in fade-in duration-200"
+      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
       <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-100 relative animate-in zoom-in-95 duration-200">
         {/* Top Header Banner */}
         <div
@@ -209,4 +213,6 @@ export const TicketCreatedSuccessModal: React.FC<TicketCreatedSuccessModalProps>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

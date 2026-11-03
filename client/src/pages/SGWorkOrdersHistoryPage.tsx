@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { api, getAssetUrl } from '../services/api';
 import { Ticket, ServiceCategory, Technician } from '../types';
 import { ServiceRequestModal } from '../components/ServiceRequestModal';
@@ -736,8 +737,11 @@ export const SGWorkOrdersHistoryPage: React.FC<SGWorkOrdersHistoryPageProps> = (
       )}
 
       {/* Modal / Vista Imprimible Horizontal para Fiscalización OCI */}
-      {showPrintableMatrixModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static">
+      {showPrintableMatrixModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+        >
           <div className="bg-white w-full max-w-[1500px] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh] print:max-h-none print:shadow-none print:border-none print:rounded-none print:w-full">
             
             {/* Header del Modal Imprimible (Oculto en Print) */}
@@ -869,7 +873,8 @@ export const SGWorkOrdersHistoryPage: React.FC<SGWorkOrdersHistoryPageProps> = (
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Star, X, CheckCircle, Heart, MessageSquare, ThumbsUp, Sparkles, User, Award } from 'lucide-react';
 import { api, getAssetUrl } from '../services/api';
 
@@ -71,8 +72,11 @@ export const SatisfactionSurveyModal: React.FC<SatisfactionSurveyModalProps> = (
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200/80 dark:border-slate-800 ring-1 ring-black/5 dark:ring-white/10 relative animate-in zoom-in-95 duration-200">
         {/* Close Button X */}
         <button
@@ -219,4 +223,6 @@ export const SatisfactionSurveyModal: React.FC<SatisfactionSurveyModalProps> = (
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

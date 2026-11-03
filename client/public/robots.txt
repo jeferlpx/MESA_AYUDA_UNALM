@@ -14,3 +14,4 @@ Disallow: /uploads/
 
 # Sitemap de indexación pública
 Sitemap: https://mesadeayuda.lamolina.edu.pe/sitemap.xml
+

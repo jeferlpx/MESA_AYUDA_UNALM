@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Ticket } from '../types';
 import { Printer, X, Wrench, ShieldAlert } from 'lucide-react';
 
@@ -63,8 +64,11 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
 
   const isSIGI = ticket.canal_origen === 'INSPECCION_SIGI';
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static"
+      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh] print:max-h-none print:shadow-none print:border-none print:rounded-none print:w-full">
         
         {/* Modal Actions Header (Hidden in Print) */}
@@ -361,4 +365,6 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

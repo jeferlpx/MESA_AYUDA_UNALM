@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { User } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -131,8 +132,11 @@ export const ForcePasswordChangeModal: React.FC<ForcePasswordChangeModalProps> =
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300"
+      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+    >
       <div className="relative w-full max-w-3xl max-h-[94vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl shadow-emerald-950/50 overflow-hidden">
         {/* Decorative ambient gradient */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-unalm-500 to-emerald-400 shrink-0" />
@@ -387,4 +391,6 @@ export const ForcePasswordChangeModal: React.FC<ForcePasswordChangeModalProps> =
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };
