@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { SearchableDependenciaSelect } from '../components/SearchableDependenciaSelect';
+import { ManualViewerModal } from '../components/ManualViewerModal';
+import { VideoTutorialModal } from '../components/VideoTutorialModal';
 import {
   Lock,
   AlertCircle,
@@ -20,6 +22,10 @@ import {
   Send,
   Building2,
   Check,
+  BookOpen,
+  Play,
+  FileText,
+  Film,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -51,6 +57,10 @@ export const LoginPage: React.FC = () => {
   const [regAnexo, setRegAnexo] = useState('');
   const [loadingRegister, setLoadingRegister] = useState(false);
   const [registerSuccessData, setRegisterSuccessData] = useState<any | null>(null);
+
+  // Modals de Inducción (Manual PDF y Video Tutorial)
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Tooltip active states
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
@@ -167,6 +177,47 @@ export const LoginPage: React.FC = () => {
       <div className="fixed -top-40 -left-40 w-96 h-96 bg-unalm-600/20 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed -bottom-40 -right-40 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Top Floating Help & Inducción Toolbar (Acceso Rápido Superior) */}
+      <header className="fixed top-3 sm:top-5 inset-x-0 z-40 px-4 sm:px-8 max-w-7xl mx-auto flex items-center justify-between pointer-events-none">
+        <div className="hidden md:flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] text-slate-300 pointer-events-auto shadow-lg">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-semibold">Plataforma Oficial de Mesa de Ayuda UNALM</span>
+        </div>
+
+        <div className="flex items-center space-x-2 sm:space-x-3 pointer-events-auto ml-auto">
+          {/* Botón Superior 1: Manual de Usuario (PDF) */}
+          <button
+            type="button"
+            onClick={() => setIsManualModalOpen(true)}
+            className="px-3 sm:px-4 py-2 rounded-full bg-slate-950/85 hover:bg-slate-900 text-slate-200 hover:text-white border border-slate-700/80 hover:border-sky-500/60 shadow-lg shadow-black/40 backdrop-blur-md text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer active:scale-95 group"
+            title="Consultar Manual de Usuario oficial en PDF"
+          >
+            <div className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <BookOpen className="w-3 h-3 text-sky-300" />
+            </div>
+            <span>Manual de Usuario</span>
+            <span className="text-[10px] bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded font-black border border-sky-500/30">
+              PDF
+            </span>
+          </button>
+
+          {/* Botón Superior 2: Video Tutorial (HD) */}
+          <button
+            type="button"
+            onClick={() => setIsVideoModalOpen(true)}
+            className="px-3.5 sm:px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-emerald-400/50 shadow-lg shadow-emerald-950/60 backdrop-blur-md text-xs font-black transition-all flex items-center space-x-2 cursor-pointer active:scale-95 group"
+            title="Reproducir video tutorial de uso del sistema"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-100" />
+            </span>
+            <Play className="w-3.5 h-3.5 fill-white text-white group-hover:scale-110 transition-transform" />
+            <span>Video Tutorial</span>
+          </button>
+        </div>
+      </header>
 
       <div className={`sm:mx-auto w-full ${authMode === 'register' ? 'sm:max-w-xl' : 'sm:max-w-md'} transition-all duration-300 relative z-20 px-4 sm:px-0`}>
         {/* Brand Header with Institutional Shield */}
@@ -375,7 +426,7 @@ export const LoginPage: React.FC = () => {
                 </button>
 
                 {/* Enlace alternativo a Registrarme */}
-                <div className="text-center pt-2 border-t border-slate-800">
+                <div className="text-center pt-2 border-t border-slate-800 space-y-2">
                   <p className="text-xs text-slate-400">
                     ¿No cuentas con usuario o acceso en el Directorio Activo?{' '}
                     <button
@@ -389,6 +440,26 @@ export const LoginPage: React.FC = () => {
                       Solicita tu registro aquí
                     </button>
                   </p>
+
+                  <div className="flex items-center justify-center space-x-3 text-[11px] text-slate-400 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsManualModalOpen(true)}
+                      className="hover:text-sky-300 font-semibold flex items-center space-x-1 cursor-pointer transition-colors"
+                    >
+                      <BookOpen className="w-3 h-3 text-sky-400" />
+                      <span>Manual PDF</span>
+                    </button>
+                    <span className="text-slate-600">•</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsVideoModalOpen(true)}
+                      className="hover:text-emerald-300 font-semibold flex items-center space-x-1 cursor-pointer transition-colors"
+                    >
+                      <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
+                      <span>Video Tutorial</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </form>
@@ -682,11 +753,81 @@ export const LoginPage: React.FC = () => {
           )}
         </div>
 
+        {/* Centro de Inducción & Recursos Multimedia */}
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 relative z-20">
+          {/* Card 1: Manual de Usuario (PDF) */}
+          <button
+            type="button"
+            onClick={() => setIsManualModalOpen(true)}
+            className="group relative flex items-center p-3 rounded-2xl bg-slate-950/70 hover:bg-slate-900/90 border border-slate-800/80 hover:border-sky-500/50 shadow-lg shadow-black/25 backdrop-blur-md transition-all duration-200 text-left hover:scale-[1.01] cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/10 border border-sky-500/30 flex items-center justify-center shrink-0 mr-3 text-sky-400 group-hover:scale-105 group-hover:bg-sky-500/30 transition-all">
+              <FileText className="w-5 h-5 text-sky-400 group-hover:text-sky-300" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  Guía Oficial PDF
+                </span>
+              </div>
+              <p className="text-xs font-bold text-slate-200 group-hover:text-white mt-0.5 truncate">
+                Manual de Usuario
+              </p>
+              <p className="text-[10px] text-slate-400 leading-tight line-clamp-1">
+                Visualizar paso a paso ilustrado
+              </p>
+            </div>
+            <span className="ml-1 text-slate-500 group-hover:text-sky-400 transition-colors">
+              <ArrowRight className="w-4 h-4" />
+            </span>
+          </button>
+
+          {/* Card 2: Video Tutorial (HD) */}
+          <button
+            type="button"
+            onClick={() => setIsVideoModalOpen(true)}
+            className="group relative flex items-center p-3 rounded-2xl bg-slate-950/70 hover:bg-slate-900/90 border border-slate-800/80 hover:border-emerald-500/50 shadow-lg shadow-black/25 backdrop-blur-md transition-all duration-200 text-left hover:scale-[1.01] cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-600/10 border border-emerald-500/30 flex items-center justify-center shrink-0 mr-3 text-emerald-400 group-hover:scale-105 group-hover:bg-emerald-500/30 transition-all">
+              <Play className="w-5 h-5 text-emerald-400 fill-emerald-400/80 group-hover:scale-105 transition-transform" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Tutorial HD</span>
+                </span>
+              </div>
+              <p className="text-xs font-bold text-slate-200 group-hover:text-white mt-0.5 truncate">
+                Video Tutorial
+              </p>
+              <p className="text-[10px] text-slate-400 leading-tight line-clamp-1">
+                Aprende a usar el sistema en video
+              </p>
+            </div>
+            <span className="ml-1 text-slate-500 group-hover:text-emerald-400 transition-colors">
+              <ArrowRight className="w-4 h-4" />
+            </span>
+          </button>
+        </div>
+
         {/* Clean Institutional Footer */}
         <p className="mt-4 pb-6 text-center text-[11px] text-slate-400/80 font-medium relative z-10">
           Universidad Nacional Agraria La Molina • Mesa de Ayuda Institucional
         </p>
       </div>
+
+      {/* Visor Modal de Manual de Usuario (PDF) */}
+      <ManualViewerModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+      />
+
+      {/* Visor Modal de Video Tutorial de Uso (MP4 HD) */}
+      <VideoTutorialModal
+        isOpen={isVideoModalOpen}
+        onClose={() => setIsVideoModalOpen(false)}
+      />
     </div>
   );
 };

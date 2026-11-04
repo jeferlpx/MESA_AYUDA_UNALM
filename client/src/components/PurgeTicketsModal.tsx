@@ -345,3 +345,4 @@ export const PurgeTicketsModal: React.FC<PurgeTicketsModalProps> = ({
     </Modal>
   );
 };
+

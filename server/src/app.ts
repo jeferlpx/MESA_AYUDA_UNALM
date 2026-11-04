@@ -35,6 +35,11 @@ app.use('/uploads', express.static(env.UPLOAD_DIR));
 app.use('/app/uploads', express.static(env.UPLOAD_DIR));
 app.use('/pruebas1/david/mesa_ayuda/uploads', express.static(env.UPLOAD_DIR));
 
+// Servir estáticamente manuales y video tutoriales
+const manualDir = path.join(__dirname, '../../manual');
+app.use('/manual', express.static(manualDir));
+app.use('/pruebas1/david/mesa_ayuda/manual', express.static(manualDir));
+
 // Endpoint de Health check
 app.get('/health', (_req, res) => {
   res.json({
