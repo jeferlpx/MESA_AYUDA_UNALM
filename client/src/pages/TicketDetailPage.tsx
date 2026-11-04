@@ -10,6 +10,7 @@ import { WorkOrderModal } from '../components/WorkOrderModal';
 import { SGFieldTimelineTracker } from '../components/SGFieldTimelineTracker';
 import { Modal } from '../components/Modal';
 import { WhatsAppButton } from '../components/WhatsAppButton';
+import { PurgeTicketsModal } from '../components/PurgeTicketsModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 
@@ -45,6 +46,7 @@ import {
   Laptop,
   History,
   AlertOctagon,
+  Trash2,
 } from 'lucide-react';
 import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
 
@@ -55,8 +57,10 @@ interface TicketDetailPageProps {
 }
 
 export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, onBack, onTicketLoaded }) => {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const toast = useToast();
+  const isAdmin = hasRole('ADMIN');
+  const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [adjuntos, setAdjuntos] = useState<TicketAdjunto[]>([]);
@@ -448,6 +452,18 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
             >
               <RotateCcw className="w-4 h-4 text-rose-600" />
               <span>Reabrir Ticket</span>
+            </button>
+          )}
+
+          {/* Botón de depuración / eliminación con PIN (Solo Administrador General) */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsPurgeModalOpen(true)}
+              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-all border border-transparent hover:border-red-200 dark:hover:border-red-900 cursor-pointer"
+              title="Eliminar este ticket con PIN Maestro (Admin General)"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -1834,6 +1850,22 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
           onClose={() => setIsEquipmentHistoryModalOpen(false)}
           numeroInventario={ticket.numero_inventario}
           currentTicketId={ticket.id}
+        />
+      )}
+
+      {/* Modal: Depuración / Eliminación con PIN Maestro (Admin General) */}
+      {isAdmin && isPurgeModalOpen && (
+        <PurgeTicketsModal
+          isOpen={isPurgeModalOpen}
+          onClose={() => setIsPurgeModalOpen(false)}
+          selectedTicketIds={[ticketId]}
+          selectedTicketCodes={ticket ? [ticket.codigo_correlativo] : []}
+          totalTicketsCount={1}
+          initialMode="selected"
+          onPurgeSuccess={(count, msg) => {
+            toast.success(msg || 'Ticket eliminado exitosamente.');
+            onBack();
+          }}
         />
       )}
     </div>

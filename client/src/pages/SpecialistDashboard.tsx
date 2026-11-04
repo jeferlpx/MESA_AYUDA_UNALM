@@ -49,9 +49,12 @@ import {
   Building2,
   Laptop,
   AlertOctagon,
+  Trash2,
 } from 'lucide-react';
+import { useToast } from '../components/Toast';
 import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
 import { EmergencyTicketModal } from '../components/EmergencyTicketModal';
+import { PurgeTicketsModal } from '../components/PurgeTicketsModal';
 
 interface SpecialistDashboardProps {
   onSelectTicketDetail: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
@@ -59,12 +62,17 @@ interface SpecialistDashboardProps {
 
 export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSelectTicketDetail }) => {
   const { user, hasRole } = useAuth();
+  const toast = useToast();
+  const isAdmin = hasRole('ADMIN');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEquipmentCode, setSelectedEquipmentCode] = useState<string | null>(null);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState<boolean>(false);
+  const [selectedTicketIds, setSelectedTicketIds] = useState<number[]>([]);
+  const [isPurgeModalOpen, setIsPurgeModalOpen] = useState<boolean>(false);
+  const [purgeInitialMode, setPurgeInitialMode] = useState<'selected' | 'all'>('selected');
 
   const isSGUser = hasRole('MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG');
   const isMesaAyudaOrAdmin = hasRole('MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG');
@@ -426,11 +434,12 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
   const columnCount = useMemo(() => {
     let count = 6; // codigo, titulo, categoria, fecha, urgencia, acciones
+    if (isAdmin) count += 1; // checkbox seleccion
     if (activeQueueTab === 'ASIGNADO') count += 1; // dias/horas sin atender
     if (activeQueueTab !== 'REPORTADO') count += 1; // estado
     if (!isTechnicianOnly && activeQueueTab !== 'REPORTADO') count += 1; // tecnico
     return count;
-  }, [activeQueueTab, isTechnicianOnly]);
+  }, [activeQueueTab, isTechnicianOnly, isAdmin]);
 
   const pendingCount = tickets.filter((t) => t.estado === 'REPORTADO').length;
 
@@ -488,6 +497,19 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
               <AlertOctagon className="w-4 h-4 text-white animate-pulse" />
               <span className="hidden sm:inline">Ticket de Emergencia / Regularización</span>
               <span className="sm:hidden">Emergencia</span>
+            </button>
+          )}
+
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setPurgeInitialMode(selectedTicketIds.length > 0 ? 'selected' : 'all');
+                setIsPurgeModalOpen(true);
+              }}
+              className="p-2.5 bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-950/40 rounded-xl text-slate-400 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-all border border-slate-200 dark:border-slate-700 hover:border-red-200 dark:hover:border-red-900 shadow-2xs cursor-pointer active:scale-95"
+              title="Depuración y Limpieza de Tickets con PIN Maestro (Admin General)"
+            >
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
 
@@ -707,6 +729,28 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
           <table className="w-full text-left text-xs border-collapse min-w-[980px]">
             <thead>
               <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 select-none">
+                {isAdmin && (
+                  <th className="py-3.5 px-3 w-[42px] text-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        sortedTickets.length > 0 &&
+                        sortedTickets.every((t) => selectedTicketIds.includes(t.id))
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const allIds = sortedTickets.map((t) => t.id);
+                          setSelectedTicketIds(Array.from(new Set([...selectedTicketIds, ...allIds])));
+                        } else {
+                          const curPageIds = new Set(sortedTickets.map((t) => t.id));
+                          setSelectedTicketIds(selectedTicketIds.filter((id) => !curPageIds.has(id)));
+                        }
+                      }}
+                      className="rounded text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer"
+                      title="Seleccionar / deseleccionar todos los tickets visibles"
+                    />
+                  </th>
+                )}
                 <th
                   onClick={() => handleSort('codigo')}
                   className="py-3.5 px-4 w-[13%] cursor-pointer hover:bg-slate-200/60 transition-colors"
@@ -836,11 +880,29 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                   <tr
                     key={t.id}
                     className={`transition-colors group ${
-                      t.es_emergencia
-                        ? 'bg-red-50/50 hover:bg-red-50 dark:bg-red-950/20 dark:hover:bg-red-950/40'
+                      selectedTicketIds.includes(t.id)
+                        ? 'bg-red-50/70 dark:bg-red-950/40'
+                        : t.es_emergencia
+                        ? 'bg-red-50/40 hover:bg-red-50 dark:bg-red-950/20 dark:hover:bg-red-950/40'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
+                    {isAdmin && (
+                      <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTicketIds.includes(t.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTicketIds([...selectedTicketIds, t.id]);
+                            } else {
+                              setSelectedTicketIds(selectedTicketIds.filter((id) => id !== t.id));
+                            }
+                          }}
+                          className="rounded text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer"
+                        />
+                      </td>
+                    )}
                     <td className="py-3 px-4 font-mono font-bold whitespace-nowrap">
                       <div className="flex flex-col space-y-1">
                         <span className={`px-2 py-0.5 rounded-lg border font-mono ${t.modulo === 'SERVICIOS_GENERALES'
@@ -1087,6 +1149,20 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                   {/* Encabezado: Código, Módulo, Urgencia y Estado */}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                      {isAdmin && (
+                        <input
+                          type="checkbox"
+                          checked={selectedTicketIds.includes(t.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedTicketIds([...selectedTicketIds, t.id]);
+                            } else {
+                              setSelectedTicketIds(selectedTicketIds.filter((id) => id !== t.id));
+                            }
+                          }}
+                          className="rounded text-red-600 focus:ring-red-500 w-4 h-4 mr-1 cursor-pointer"
+                        />
+                      )}
                       <span className={`px-2 py-0.5 rounded-lg border font-mono text-xs font-extrabold ${
                         isSG
                           ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-200 dark:border-amber-800'
@@ -1314,17 +1390,34 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                   <User className="w-3.5 h-3.5 text-unalm-600" />
                   <span>Contacto del Solicitante</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsDrawerOpen(false);
-                    onSelectTicketDetail(selectedTicket.id, selectedTicket.codigo_correlativo, selectedTicket.estado);
-                  }}
-                  className="text-[11px] font-bold text-unalm-700 hover:text-unalm-900 flex items-center space-x-1 cursor-pointer bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs hover:bg-slate-50 transition-colors"
-                >
-                  <Eye className="w-3 h-3 text-unalm-600" />
-                  <span>Ver Detalle Completo</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTicketIds([selectedTicket.id]);
+                        setPurgeInitialMode('selected');
+                        setIsPurgeModalOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-red-600 hover:text-red-700 flex items-center space-x-1 cursor-pointer bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-lg border border-red-200 transition-colors"
+                      title="Eliminar este ticket con PIN Maestro (Admin General)"
+                    >
+                      <Trash2 className="w-3 h-3 text-red-500" />
+                      <span>Eliminar</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      onSelectTicketDetail(selectedTicket.id, selectedTicket.codigo_correlativo, selectedTicket.estado);
+                    }}
+                    className="text-[11px] font-bold text-unalm-700 hover:text-unalm-900 flex items-center space-x-1 cursor-pointer bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs hover:bg-slate-50 transition-colors"
+                  >
+                    <Eye className="w-3 h-3 text-unalm-600" />
+                    <span>Ver Detalle Completo</span>
+                  </button>
+                </div>
               </div>
 
               <div className="text-xs space-y-1.5 pt-1 border-t border-slate-200/60">
@@ -2108,6 +2201,56 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
             if (newTicket?.id) {
               onSelectTicketDetail(newTicket.id, newTicket.codigoCorrelativo, 'REPORTADO');
             }
+          }}
+        />
+      )}
+
+      {/* Barra Flotante de Acciones en Lote (Solo Admin General con Tickets Seleccionados) */}
+      {isAdmin && selectedTicketIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center space-x-3.5 animate-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center space-x-2 text-xs font-bold">
+            <span className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-[11px] shadow-sm">
+              {selectedTicketIds.length}
+            </span>
+            <span className="text-slate-200">ticket(s) seleccionado(s)</span>
+          </div>
+          <div className="h-4 w-px bg-slate-700" />
+          <button
+            type="button"
+            onClick={() => {
+              setPurgeInitialMode('selected');
+              setIsPurgeModalOpen(true);
+            }}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center space-x-1.5 cursor-pointer active:scale-95"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Eliminar con PIN</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedTicketIds([])}
+            className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            Deseleccionar
+          </button>
+        </div>
+      )}
+
+      {/* Modal: Depuración y Eliminación Segura de Tickets con PIN Maestro */}
+      {isAdmin && isPurgeModalOpen && (
+        <PurgeTicketsModal
+          isOpen={isPurgeModalOpen}
+          onClose={() => setIsPurgeModalOpen(false)}
+          selectedTicketIds={selectedTicketIds}
+          selectedTicketCodes={tickets
+            .filter((t) => selectedTicketIds.includes(t.id))
+            .map((t) => t.codigo_correlativo)}
+          totalTicketsCount={tickets.length}
+          initialMode={purgeInitialMode}
+          onPurgeSuccess={(deletedCount, msg) => {
+            setSelectedTicketIds([]);
+            toast.success(msg || `Se eliminaron ${deletedCount} ticket(s) exitosamente.`);
+            loadData();
           }}
         />
       )}

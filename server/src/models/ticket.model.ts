@@ -1,5 +1,6 @@
 import { dbPool } from '../config/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import fs from 'fs';
 import {
   TicketDB,
   TicketStatus,
@@ -918,6 +919,91 @@ export class TicketModel {
         total: Number(ur.total || 0),
       })),
     };
+  }
+
+  static async deleteTicketsByIds(ids: number[]): Promise<number> {
+    if (!ids || ids.length === 0) return 0;
+    const conn = await dbPool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // 1. Desvincular hallazgos de inspección
+      await conn.query('UPDATE hallazgos_inspeccion SET ticket_id = NULL WHERE ticket_id IN (?)', [ids]);
+
+      // 2. Desvincular movimientos de materiales SG
+      await conn.query('UPDATE materiales_movimientos_sg SET ticket_id = NULL WHERE ticket_id IN (?)', [ids]);
+
+      // 3. Eliminar archivos físicos adjuntos si existen
+      try {
+        const [attRows] = await conn.query<RowDataPacket[]>('SELECT ruta_servidor FROM adjuntos WHERE ticket_id IN (?)', [ids]);
+        for (const a of attRows as any[]) {
+          if (a.ruta_servidor && fs.existsSync(a.ruta_servidor)) {
+            try {
+              fs.unlinkSync(a.ruta_servidor);
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+
+      // 4. Eliminar los tickets (cascada automática en DB a adjuntos, comentarios, encuestas, auditoría, asignaciones)
+      const [result] = await conn.query<ResultSetHeader>('DELETE FROM tickets WHERE id IN (?)', [ids]);
+
+      await conn.commit();
+      return result.affectedRows;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  static async purgeAllTickets(modulo?: string): Promise<number> {
+    const conn = await dbPool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      let targetIds: number[] = [];
+      if (modulo && (modulo === 'OTIC' || modulo === 'SERVICIOS_GENERALES')) {
+        const [rows] = await conn.query<RowDataPacket[]>('SELECT id FROM tickets WHERE modulo = ?', [modulo]);
+        targetIds = (rows as any[]).map((r) => r.id);
+      } else {
+        const [rows] = await conn.query<RowDataPacket[]>('SELECT id FROM tickets');
+        targetIds = (rows as any[]).map((r) => r.id);
+      }
+
+      if (targetIds.length === 0) {
+        await conn.commit();
+        return 0;
+      }
+
+      // 1. Desvincular hallazgos y movimientos
+      await conn.query('UPDATE hallazgos_inspeccion SET ticket_id = NULL WHERE ticket_id IN (?)', [targetIds]);
+      await conn.query('UPDATE materiales_movimientos_sg SET ticket_id = NULL WHERE ticket_id IN (?)', [targetIds]);
+
+      // 2. Eliminar archivos adjuntos en disco
+      try {
+        const [attRows] = await conn.query<RowDataPacket[]>('SELECT ruta_servidor FROM adjuntos WHERE ticket_id IN (?)', [targetIds]);
+        for (const a of attRows as any[]) {
+          if (a.ruta_servidor && fs.existsSync(a.ruta_servidor)) {
+            try {
+              fs.unlinkSync(a.ruta_servidor);
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+
+      // 3. Eliminar tickets
+      const [result] = await conn.query<ResultSetHeader>('DELETE FROM tickets WHERE id IN (?)', [targetIds]);
+
+      await conn.commit();
+      return result.affectedRows;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 }
 

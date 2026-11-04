@@ -206,6 +206,16 @@ export const api = {
   },
   createTicket: (formData: FormData) => 
     apiFetch('/tickets', { method: 'POST', body: formData }),
+  purgeTickets: (data: {
+    pin: string;
+    action: 'selected' | 'all';
+    ticketIds?: number[];
+    modulo?: string;
+  }) =>
+    apiFetch('/tickets/purge', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   updateStatus: (
     id: number,
     status: string,

@@ -1223,5 +1223,72 @@ export class TicketController {
       return res.status(500).json({ success: false, message: 'Error al adjuntar archivos al ticket' });
     }
   }
+
+  static async purgeTickets(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) return res.status(401).json({ success: false, message: 'No autenticado' });
+
+      // Verificar rol ADMIN en rol principal o roles múltiples
+      const userRoles = req.user.roles || [req.user.rol];
+      if (!userRoles.includes('ADMIN')) {
+        return res.status(403).json({
+          success: false,
+          message: 'Acceso denegado: Esta función de depuración está reservada exclusivamente para el Administrador General.',
+        });
+      }
+
+      const { pin, action, ticketIds, modulo } = req.body;
+      const MASTER_PIN = process.env.ADMIN_PURGE_PIN || '1308';
+
+      if (!pin || String(pin).trim() !== String(MASTER_PIN).trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Clave maestra / PIN de seguridad incorrecto. Operación de depuración rechazada.',
+        });
+      }
+
+      let deletedCount = 0;
+      if (action === 'selected') {
+        if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+          return res.status(400).json({ success: false, message: 'Debe seleccionar al menos un ticket para eliminar.' });
+        }
+        const cleanIds = ticketIds
+          .map((id: any) => parseInt(id, 10))
+          .filter((n: number) => !isNaN(n) && n > 0);
+
+        if (cleanIds.length === 0) {
+          return res.status(400).json({ success: false, message: 'IDs de tickets seleccionados no válidos.' });
+        }
+
+        deletedCount = await TicketModel.deleteTicketsByIds(cleanIds);
+      } else if (action === 'all') {
+        deletedCount = await TicketModel.purgeAllTickets(modulo);
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Acción de depuración no válida. Debe ser "selected" o "all".',
+        });
+      }
+
+      console.warn(
+        `[ADMIN PURGE] El Administrador General ${req.user.email} (ID: ${req.user.id}) eliminó ${deletedCount} tickets. Acción: ${action}, IP: ${req.ip}`
+      );
+
+      return res.json({
+        success: true,
+        message:
+          action === 'all'
+            ? `Se han purgado exitosamente todos los tickets del sistema (${deletedCount} tickets eliminados permanentemente).`
+            : `Se han eliminado exitosamente ${deletedCount} ticket(s) seleccionado(s).`,
+        data: { deletedCount },
+      });
+    } catch (error: any) {
+      console.error('[purgeTickets Error]:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error interno en el servidor al procesar la eliminación de tickets.',
+      });
+    }
+  }
 }
 
