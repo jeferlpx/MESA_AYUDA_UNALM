@@ -37,11 +37,14 @@ export class TicketModel {
               cat.nombre as categoria_nombre,
               cat.sla_horas_respuesta as categoria_sla_respuesta,
               cat.sla_horas_resolucion as categoria_sla_resolucion,
+              CONCAT(creator.nombres, ' ', creator.apellidos) as creado_por_nombre,
+              creator.email as creado_por_email,
               es.puntuacion as encuesta_puntuacion,
               es.comentario as encuesta_comentario
        FROM tickets t
        INNER JOIN usuarios sol ON t.solicitante_id = sol.id
        LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+       LEFT JOIN usuarios creator ON t.creado_por_id = creator.id
        INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
        LEFT JOIN encuestas_satisfaccion es ON t.id = es.ticket_id
        WHERE t.id = ?`,
@@ -102,11 +105,14 @@ export class TicketModel {
               (SELECT COUNT(id) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_total_calificaciones,
               (SELECT COUNT(id) FROM tickets WHERE tecnico_id = tec.id AND estado = 'RESUELTO') as tecnico_total_resueltos,
               cat.nombre as categoria_nombre,
+              CONCAT(creator.nombres, ' ', creator.apellidos) as creado_por_nombre,
+              creator.email as creado_por_email,
               es.puntuacion as encuesta_puntuacion,
               es.comentario as encuesta_comentario
        FROM tickets t
        INNER JOIN usuarios sol ON t.solicitante_id = sol.id
        LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+       LEFT JOIN usuarios creator ON t.creado_por_id = creator.id
        INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
        LEFT JOIN encuestas_satisfaccion es ON t.id = es.ticket_id
        WHERE t.codigo_correlativo = ?`,
@@ -178,11 +184,13 @@ export class TicketModel {
              (SELECT COUNT(id) FROM encuestas_satisfaccion WHERE tecnico_id = tec.id) as tecnico_total_calificaciones,
              (SELECT COUNT(id) FROM tickets WHERE tecnico_id = tec.id AND estado = 'RESUELTO') as tecnico_total_resueltos,
              cat.nombre as categoria_nombre,
+             CONCAT(creator.nombres, ' ', creator.apellidos) as creado_por_nombre,
              es.puntuacion as encuesta_puntuacion,
              es.comentario as encuesta_comentario
       FROM tickets t
       INNER JOIN usuarios sol ON t.solicitante_id = sol.id
       LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
+      LEFT JOIN usuarios creator ON t.creado_por_id = creator.id
       INNER JOIN categorias_servicio cat ON t.categoria_id = cat.id
       LEFT JOIN encuestas_satisfaccion es ON t.id = es.ticket_id
       WHERE 1=1
@@ -321,6 +329,9 @@ export class TicketModel {
     fechaLimiteResolucion?: Date | null;
     esEquipo?: boolean;
     numeroInventario?: string | null;
+    esEmergencia?: boolean | number;
+    justificacionEmergencia?: string | null;
+    creadoPorId?: number | null;
   }): Promise<number> {
     const estadoInicial = data.tecnicoId ? 'ASIGNADO' : 'REPORTADO';
 
@@ -329,8 +340,9 @@ export class TicketModel {
         codigo_correlativo, modulo, titulo, descripcion, tipo, prioridad, impacto, urgencia, complejidad, estado,
         solicitante_id, tecnico_id, categoria_id, ubicacion_oficina, referencia_ubicacion, contacto_local, horario_acceso,
         subtipo_intervencion, datos_vehiculares, materiales_usados, canal_origen,
-        fecha_limite_respuesta, fecha_limite_resolucion, es_equipo, numero_inventario
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        fecha_limite_respuesta, fecha_limite_resolucion, es_equipo, numero_inventario,
+        es_emergencia, justificacion_emergencia, creado_por_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.codigoCorrelativo,
         data.modulo || 'OTIC',
@@ -357,6 +369,9 @@ export class TicketModel {
         data.fechaLimiteResolucion || null,
         data.esEquipo ? 1 : 0,
         data.numeroInventario ? data.numeroInventario.trim() : null,
+        data.esEmergencia ? 1 : 0,
+        data.justificacionEmergencia ? data.justificacionEmergencia.trim() : null,
+        data.creadoPorId || null,
       ]
     );
 

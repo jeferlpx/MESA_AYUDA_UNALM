@@ -48,8 +48,10 @@ import {
   CheckCircle,
   Building2,
   Laptop,
+  AlertOctagon,
 } from 'lucide-react';
 import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
+import { EmergencyTicketModal } from '../components/EmergencyTicketModal';
 
 interface SpecialistDashboardProps {
   onSelectTicketDetail: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
@@ -62,6 +64,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEquipmentCode, setSelectedEquipmentCode] = useState<string | null>(null);
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState<boolean>(false);
 
   const isSGUser = hasRole('MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG');
   const isMesaAyudaOrAdmin = hasRole('MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG');
@@ -476,6 +479,18 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
         </div>
 
         <div className="flex items-center space-x-3">
+          {isMesaAyudaOrAdmin && (
+            <button
+              onClick={() => setIsEmergencyModalOpen(true)}
+              className="flex items-center space-x-2 px-3.5 py-2.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs rounded-xl shadow-md shadow-red-500/25 active:scale-95 transition-all cursor-pointer"
+              title="Registrar ticket de emergencia o regularización"
+            >
+              <AlertOctagon className="w-4 h-4 text-white animate-pulse" />
+              <span className="hidden sm:inline">Ticket de Emergencia / Regularización</span>
+              <span className="sm:hidden">Emergencia</span>
+            </button>
+          )}
+
           <button
             onClick={loadData}
             className="p-2.5 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-all border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer active:scale-95"
@@ -818,7 +833,14 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                 </tr>
               ) : (
                 sortedTickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-50 transition-colors group">
+                  <tr
+                    key={t.id}
+                    className={`transition-colors group ${
+                      t.es_emergencia
+                        ? 'bg-red-50/50 hover:bg-red-50 dark:bg-red-950/20 dark:hover:bg-red-950/40'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
                     <td className="py-3 px-4 font-mono font-bold whitespace-nowrap">
                       <div className="flex flex-col space-y-1">
                         <span className={`px-2 py-0.5 rounded-lg border font-mono ${t.modulo === 'SERVICIOS_GENERALES'
@@ -827,6 +849,11 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                           }`}>
                           {t.codigo_correlativo}
                         </span>
+                        {Boolean(t.es_emergencia) && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-2xs w-fit animate-pulse">
+                            🚨 EMERGENCIA
+                          </span>
+                        )}
                         {t.canal_origen === 'INSPECCION_SIGI' && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-600 text-white shadow-2xs w-fit">
                             🚨 SIGI PREVENTIVA
@@ -1067,6 +1094,11 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                       }`}>
                         {t.codigo_correlativo}
                       </span>
+                      {Boolean(t.es_emergencia) && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-2xs animate-pulse">
+                          🚨 EMERGENCIA
+                        </span>
+                      )}
                       {t.canal_origen === 'INSPECCION_SIGI' && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-600 text-white shadow-2xs">
                           🚨 SIGI
@@ -1253,6 +1285,28 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
           subtitle={`${selectedTicket.modulo === 'SERVICIOS_GENERALES' ? '🏗️ Servicios Generales' : '💻 OTIC'} — ${selectedTicket.titulo}`}
         >
           <div className="space-y-4">
+            {/* Aviso de Requerimiento de Emergencia / Regularización */}
+            {Boolean(selectedTicket.es_emergencia) && (
+              <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-2xl text-xs space-y-1.5 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 font-black text-red-700 dark:text-red-300">
+                    <AlertOctagon className="w-4 h-4 text-red-600 animate-pulse" />
+                    <span>🚨 TICKET DE EMERGENCIA / REGULARIZACIÓN</span>
+                  </div>
+                  {selectedTicket.canal_origen && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800">
+                      {selectedTicket.canal_origen}
+                    </span>
+                  )}
+                </div>
+                {selectedTicket.justificacion_emergencia && (
+                  <p className="text-[11px] text-red-900 dark:text-red-200 leading-relaxed font-medium bg-white/70 dark:bg-slate-900/60 p-2.5 rounded-xl border border-red-200/60">
+                    <strong>Motivo:</strong> {selectedTicket.justificacion_emergencia}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Tarjeta de Contacto Rápido del Solicitante & WhatsApp */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
               <div className="flex items-center justify-between">
@@ -2039,6 +2093,22 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
           onClose={() => setSelectedEquipmentCode(null)}
           numeroInventario={selectedEquipmentCode}
           onSelectTicketDetail={onSelectTicketDetail}
+        />
+      )}
+
+      {/* Modal: Registrar Ticket de Emergencia / Regularización */}
+      {isEmergencyModalOpen && (
+        <EmergencyTicketModal
+          isOpen={isEmergencyModalOpen}
+          onClose={() => setIsEmergencyModalOpen(false)}
+          categories={categories}
+          technicians={technicians}
+          onTicketCreated={async (newTicket) => {
+            await loadData();
+            if (newTicket?.id) {
+              onSelectTicketDetail(newTicket.id, newTicket.codigoCorrelativo, 'REPORTADO');
+            }
+          }}
         />
       )}
     </div>

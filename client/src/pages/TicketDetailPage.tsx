@@ -44,6 +44,7 @@ import {
   Users,
   Laptop,
   History,
+  AlertOctagon,
 } from 'lucide-react';
 import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
 
@@ -472,6 +473,12 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
             }`}>
               {isSG ? '🏗️ Servicios Generales' : '💻 Tecnologías de Información (OTIC)'}
             </span>
+            {Boolean(ticket.es_emergencia) && (
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-red-100 text-red-700 dark:bg-red-950/70 dark:text-red-300 dark:border-red-800 border border-red-300 rounded-xl text-xs font-black shadow-xs animate-pulse">
+                <span>🚨</span>
+                <span>EMERGENCIA / REGULARIZACIÓN</span>
+              </span>
+            )}
           </div>
 
           <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -491,6 +498,42 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
         <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
           {ticket.titulo}
         </h1>
+
+        {/* Banner Informativo de Requerimiento de Emergencia / Regularización */}
+        {Boolean(ticket.es_emergencia) && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-950/40 dark:to-rose-950/40 border border-red-200 dark:border-red-800/80 text-red-900 dark:text-red-200 space-y-3 shadow-xs animate-in fade-in">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center space-x-2 font-black text-xs uppercase tracking-wider text-red-700 dark:text-red-300">
+                <AlertOctagon className="w-5 h-5 text-red-600 dark:text-red-400 animate-pulse" />
+                <span>Requerimiento de Emergencia / Atención Inmediata Regularizada</span>
+              </div>
+              {ticket.canal_origen && (
+                <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/60 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-700 flex items-center space-x-1">
+                  <span>Vía de Recepción:</span>
+                  <span className="uppercase">{ticket.canal_origen}</span>
+                </span>
+              )}
+            </div>
+
+            {ticket.justificacion_emergencia && (
+              <div className="space-y-1">
+                <span className="text-[11px] font-black uppercase text-red-700 dark:text-red-400 block tracking-wider">
+                  Justificación de la Emergencia / Regularización:
+                </span>
+                <p className="text-xs sm:text-sm leading-relaxed font-medium bg-white/80 dark:bg-slate-900/70 p-3.5 rounded-xl border border-red-200/80 dark:border-red-900/60 shadow-2xs">
+                  {ticket.justificacion_emergencia}
+                </p>
+              </div>
+            )}
+
+            {ticket.creado_por_nombre && (
+              <div className="text-[11px] font-medium text-red-700/90 dark:text-red-300/90 pt-1 border-t border-red-200/60 dark:border-red-900/40">
+                Ticket regularizado y registrado por operador:{' '}
+                <strong className="font-bold">{ticket.creado_por_nombre}</strong> (Mesa de Ayuda OTIC).
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bien / Equipo Patrimonial Vinculado */}
         {ticket.numero_inventario && (

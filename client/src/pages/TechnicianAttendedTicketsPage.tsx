@@ -294,7 +294,14 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
                     className="hover:bg-slate-50/80 cursor-pointer transition-colors"
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-unalm-700 whitespace-nowrap">
-                      {t.codigo_correlativo}
+                      <div className="flex flex-col space-y-1">
+                        <span>{t.codigo_correlativo}</span>
+                        {Boolean(t.es_emergencia) && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-2xs w-fit animate-pulse">
+                            🚨 EMERGENCIA
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-3.5 px-4 max-w-xs">

@@ -30,6 +30,36 @@ export class UserController {
     }
   }
 
+  static async getSolicitants(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) return res.status(401).json({ success: false, message: 'No autenticado' });
+
+      const search = (req.query.search as string) || '';
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 40;
+
+      const solicitants = await UserModel.findSolicitants(search, limit);
+      return res.json({
+        success: true,
+        data: solicitants.map((u) => ({
+          id: u.id,
+          nombres: u.nombres,
+          apellidos: u.apellidos,
+          email: u.email,
+          rol: u.rol_codigo,
+          rolNombre: u.rol_nombre,
+          facultadDependencia: u.facultad_dependencia,
+          telefono: u.telefono,
+          anexo: u.anexo,
+          cargo: u.cargo,
+          fotoPerfil: u.foto_perfil,
+        })),
+      });
+    } catch (error: any) {
+      console.error('[getSolicitants error]:', error);
+      return res.status(500).json({ success: false, message: 'Error al buscar solicitantes' });
+    }
+  }
+
   static async getProfile(req: AuthenticatedRequest, res: Response) {
     try {
       if (!req.user) {

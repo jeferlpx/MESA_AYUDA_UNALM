@@ -198,6 +198,9 @@ CREATE TABLE `tickets` (
   `referencia_ubicacion` VARCHAR(255) NULL,
   `es_equipo` TINYINT(1) NOT NULL DEFAULT 0,
   `numero_inventario` VARCHAR(100) NULL,
+  `es_emergencia` TINYINT(1) NOT NULL DEFAULT 0,
+  `justificacion_emergencia` TEXT NULL,
+  `creado_por_id` INT NULL,
   `inspeccion_id` INT NULL,
   `hallazgo_id` INT NULL,
   `creado_en` DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -205,6 +208,7 @@ CREATE TABLE `tickets` (
   CONSTRAINT `fk_tickets_solicitante` FOREIGN KEY (`solicitante_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_tickets_tecnico` FOREIGN KEY (`tecnico_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tickets_categoria` FOREIGN KEY (`categoria_id`) REFERENCES `categorias_servicio` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_tickets_creado_por` FOREIGN KEY (`creado_por_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL,
   INDEX `idx_tickets_codigo` (`codigo_correlativo`),
   INDEX `idx_tickets_modulo` (`modulo`),
   INDEX `idx_tickets_estado` (`estado`),
@@ -213,7 +217,8 @@ CREATE TABLE `tickets` (
   INDEX `idx_tickets_categoria` (`categoria_id`),
   INDEX `idx_tickets_prioridad` (`prioridad`),
   INDEX `idx_tickets_fecha_apertura` (`fecha_apertura`),
-  INDEX `idx_tickets_numero_inventario` (`numero_inventario`)
+  INDEX `idx_tickets_numero_inventario` (`numero_inventario`),
+  INDEX `idx_tickets_es_emergencia` (`es_emergencia`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================

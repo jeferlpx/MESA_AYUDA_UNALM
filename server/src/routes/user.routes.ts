@@ -16,6 +16,8 @@ router.post('/profile/photo', uploadMiddleware.single('file'), UserController.up
 router.get('/technicians', UserController.getTechnicians);
 router.get('/technicians/:id/history', UserController.getTechnicianHistory);
 
+// Búsqueda de solicitantes del Directorio Activo (excluyendo Administrador General) para Mesa de Ayuda
+router.get('/solicitants', authorizeRoles('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG', 'MESA_AYUDA', 'MESA_AYUDA_SG'), UserController.getSolicitants);
 
 // Rutas de administración de usuarios
 router.get('/', authorizeRoles('ADMIN', 'SUPERVISOR'), UserController.getAllUsers);

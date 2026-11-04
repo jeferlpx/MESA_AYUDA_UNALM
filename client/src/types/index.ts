@@ -129,6 +129,10 @@ export interface Ticket {
   materiales_sobrantes?: string;
   es_equipo?: boolean;
   numero_inventario?: string | null;
+  es_emergencia?: boolean;
+  justificacion_emergencia?: string;
+  creado_por_id?: number;
+  creado_por_nombre?: string;
   canal_origen: string;
   fecha_apertura: string;
   fecha_primera_respuesta?: string;

@@ -269,6 +269,44 @@ export class UserModel {
     return rows.map((r) => parseUserRow(r));
   }
 
+  static async findSolicitants(search?: string, limit: number = 40): Promise<UserDB[]> {
+    let sql = `
+      SELECT u.id, u.nombres, u.apellidos, u.email, u.rol_id, u.cargo,
+             u.facultad_dependencia, u.telefono, u.anexo, u.foto_perfil, u.estado,
+             r.codigo as rol_codigo, r.nombre as rol_nombre
+      FROM usuarios u
+      INNER JOIN roles r ON u.rol_id = r.id
+      WHERE u.estado = 'ACTIVO'
+        AND r.codigo != 'ADMIN'
+        AND u.email != 'admin@lamolina.edu.pe'
+        AND NOT EXISTS (
+          SELECT 1 FROM usuario_roles ur
+          JOIN roles r2 ON ur.rol_id = r2.id
+          WHERE ur.usuario_id = u.id AND r2.codigo = 'ADMIN'
+        )
+    `;
+    const params: any[] = [];
+
+    if (search && search.trim()) {
+      const q = `%${search.trim()}%`;
+      sql += ` AND (
+        u.nombres LIKE ?
+        OR u.apellidos LIKE ?
+        OR CONCAT(u.nombres, ' ', u.apellidos) LIKE ?
+        OR CONCAT(u.apellidos, ' ', u.nombres) LIKE ?
+        OR u.email LIKE ?
+        OR u.facultad_dependencia LIKE ?
+      )`;
+      params.push(q, q, q, q, q, q);
+    }
+
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 40, 100));
+    sql += ` ORDER BY u.nombres ASC, u.apellidos ASC LIMIT ${safeLimit}`;
+
+    const [rows] = await dbPool.query<RowDataPacket[]>(sql, params);
+    return rows.map((r) => parseUserRow(r));
+  }
+
   static async updateUser(id: number, data: {
     nombres: string;
     apellidos: string;

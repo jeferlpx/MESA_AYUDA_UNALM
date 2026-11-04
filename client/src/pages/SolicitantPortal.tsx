@@ -998,6 +998,11 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
                         </span>
                         <StatusBadge status={ticket.estado} />
                         <UrgencyBadge urgency={ticket.urgencia} />
+                        {Boolean(ticket.es_emergencia) && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-2xs animate-pulse">
+                            🚨 EMERGENCIA / REGULARIZADO
+                          </span>
+                        )}
                         {ticket.numero_inventario && (
                           <span className="font-mono text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                             💻 Bien: #{ticket.numero_inventario}

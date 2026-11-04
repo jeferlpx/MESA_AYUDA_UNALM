@@ -97,6 +97,9 @@ export async function runDatabaseMigrations(): Promise<void> {
       { name: 'referencia_ubicacion', type: 'VARCHAR(255) NULL' },
       { name: 'es_equipo', type: 'TINYINT(1) NOT NULL DEFAULT 0' },
       { name: 'numero_inventario', type: 'VARCHAR(100) NULL' },
+      { name: 'es_emergencia', type: 'TINYINT(1) NOT NULL DEFAULT 0' },
+      { name: 'justificacion_emergencia', type: 'TEXT NULL' },
+      { name: 'creado_por_id', type: 'INT NULL' },
     ];
 
     for (const col of sgTicketColumns) {
@@ -111,6 +114,10 @@ export async function runDatabaseMigrations(): Promise<void> {
 
     try {
       await connection.query(`ALTER TABLE tickets ADD INDEX idx_tickets_numero_inventario (numero_inventario)`);
+    } catch (e: any) {}
+
+    try {
+      await connection.query(`ALTER TABLE tickets ADD INDEX idx_tickets_es_emergencia (es_emergencia)`);
     } catch (e: any) {}
 
     // 5. Asegurar que tickets.urgencia soporte CRITICA

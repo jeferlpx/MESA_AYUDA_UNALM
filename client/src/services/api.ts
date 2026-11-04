@@ -155,6 +155,13 @@ export const api = {
   },
   getTechnicianHistory: (id: number) =>
     apiFetch(`/users/technicians/${id}/history`),
+  getSolicitants: (params?: { search?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.limit) q.append('limit', String(params.limit));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch(`/users/solicitants${qs}`);
+  },
   getUsers: (params?: Record<string, string>) => {
 
     const query = new URLSearchParams(params).toString();

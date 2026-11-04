@@ -239,12 +239,41 @@ export class TicketController {
         es_equipo,
         numeroInventario,
         numero_inventario,
+        solicitanteId,
+        solicitante_id,
+        tecnicoId,
+        tecnico_id,
+        esEmergencia,
+        es_emergencia,
+        justificacionEmergencia,
+        justificacion_emergencia,
+        canalOrigen,
+        canal_origen,
       } = req.body;
 
       const isEquipoFinal = esEquipo === true || esEquipo === 'true' || es_equipo === true || es_equipo === 'true';
       const numInventarioFinal = isEquipoFinal
         ? (numeroInventario ? String(numeroInventario).trim() : (numero_inventario ? String(numero_inventario).trim() : null))
         : null;
+
+      const isEmergenciaFinal =
+        esEmergencia === true ||
+        esEmergencia === 'true' ||
+        es_emergencia === true ||
+        es_emergencia === 'true' ||
+        es_emergencia === 1 ||
+        es_emergencia === '1';
+
+      const justificacionEmergenciaFinal =
+        (justificacionEmergencia ? String(justificacionEmergencia).trim() : (justificacion_emergencia ? String(justificacion_emergencia).trim() : '')) || null;
+
+      // Validación estricta: Si es de emergencia / regularización, debe tener justificación
+      if (isEmergenciaFinal && (!justificacionEmergenciaFinal || justificacionEmergenciaFinal.length < 5)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Debe ingresar una justificación detallada (mínimo 5 caracteres) para registrar el ticket de emergencia / regularización.',
+        });
+      }
 
       if (!titulo || !descripcion || !categoriaId) {
         return res.status(400).json({ success: false, message: 'Título, descripción y categoría de servicio son requeridos' });
@@ -259,7 +288,7 @@ export class TicketController {
       const isSG = moduloTicket === 'SERVICIOS_GENERALES';
 
       const ticketImpact: TicketImpact = impacto || 'MEDIO';
-      const ticketUrgency: TicketUrgency = urgencia || 'MEDIA';
+      const ticketUrgency: TicketUrgency = urgencia || (isEmergenciaFinal ? 'ALTA' : 'MEDIA');
       const prioridad = calculatePriority(ticketImpact, ticketUrgency);
 
       // Si es Servicios Generales, no se aplican SLAs
@@ -273,10 +302,35 @@ export class TicketController {
 
       const codigoCorrelativo = await generateTicketCode(moduloTicket);
 
+      // Permisos para crear en representación de otro solicitante
+      const userRoles = req.user.roles || [req.user.rol];
+      const canManageTickets = userRoles.some((r) =>
+        ['MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG'].includes(r)
+      );
+
+      let finalSolicitanteId = req.user.id;
+      const rawSolId = solicitanteId || solicitante_id;
+      if (canManageTickets && rawSolId) {
+        const parsedSol = parseInt(String(rawSolId), 10);
+        if (!isNaN(parsedSol) && parsedSol > 0) {
+          finalSolicitanteId = parsedSol;
+        }
+      }
+
       // REGLA: El derivar automáticamente no debe estar activado por defecto.
       // Solo se auto-asigna si la opción está activada desde la configuración por el Admin General.
       const isAutoAssign = await ConfigModel.isAutoAssignEnabled();
-      const autoTecnicoId = isAutoAssign ? (category.tecnico_defecto_id || null) : null;
+      let finalTecnicoId = isAutoAssign ? (category.tecnico_defecto_id || null) : null;
+      
+      const rawTecId = tecnicoId || tecnico_id;
+      if (canManageTickets && rawTecId) {
+        const parsedTec = parseInt(String(rawTecId), 10);
+        if (!isNaN(parsedTec) && parsedTec > 0) {
+          finalTecnicoId = parsedTec;
+        }
+      }
+
+      const finalCanalOrigen = canalOrigen || canal_origen || (isEmergenciaFinal ? 'TELEFONO' : 'PORTAL_WEB');
 
       // Sincronizar automáticamente celular, anexo y centro de labores en el perfil del usuario si se enviaron
       try {
@@ -284,7 +338,7 @@ export class TicketController {
         const uAnexo = req.body.anexo;
         const uDep = req.body.facultadDependencia || (ubicacionOficina && !ubicacionOficina.includes('#N/D') ? ubicacionOficina : undefined);
         if (uPhone || uAnexo || uDep) {
-          await UserModel.updateProfile(req.user.id, {
+          await UserModel.updateProfile(finalSolicitanteId, {
             telefono: uPhone ? String(uPhone).trim() : undefined,
             anexo: uAnexo ? String(uAnexo).trim() : undefined,
             facultadDependencia: uDep ? String(uDep).trim() : undefined,
@@ -299,13 +353,13 @@ export class TicketController {
         modulo: moduloTicket,
         titulo,
         descripcion,
-        tipo: tipo || 'INCIDENTE',
+        tipo: tipo || (isEmergenciaFinal ? 'INCIDENTE' : 'INCIDENTE'),
         prioridad,
         impacto: ticketImpact,
         urgencia: ticketUrgency,
         complejidad: 'BAJA',
-        solicitanteId: req.user.id,
-        tecnicoId: autoTecnicoId,
+        solicitanteId: finalSolicitanteId,
+        tecnicoId: finalTecnicoId,
         categoriaId: category.id,
         ubicacionOficina: ubicacionOficina || null,
         referenciaUbicacion: referenciaUbicacion || null,
@@ -314,11 +368,14 @@ export class TicketController {
         subtipoIntervencion: subtipoIntervencion || null,
         datosVehiculares: datosVehiculares || null,
         materialesUsados: materialesUsados || null,
-        canalOrigen: 'PORTAL_WEB',
+        canalOrigen: finalCanalOrigen,
         fechaLimiteRespuesta,
         fechaLimiteResolucion,
         esEquipo: isEquipoFinal,
         numeroInventario: numInventarioFinal,
+        esEmergencia: isEmergenciaFinal,
+        justificacionEmergencia: justificacionEmergenciaFinal,
+        creadoPorId: canManageTickets && finalSolicitanteId !== req.user.id ? req.user.id : null,
       });
 
       // Procesar archivos adjuntos si vienen en la petición (soporte múltiple con deduplicación)
@@ -358,18 +415,38 @@ export class TicketController {
       }
 
       // Log de auditoría
-      await TicketModel.logAudit({
-        ticketId: newTicketId,
-        usuarioId: req.user.id,
-        accion: 'CREACION_TICKET',
-        valorNuevo: `${codigoCorrelativo} (${titulo})${referenciaUbicacion ? ` - Ref: ${referenciaUbicacion}` : ''}`,
-        ipOrigen: req.ip,
-      });
+      if (isEmergenciaFinal) {
+        await TicketModel.logAudit({
+          ticketId: newTicketId,
+          usuarioId: req.user.id,
+          accion: 'CREACION_TICKET',
+          valorNuevo: `🚨 TICKET DE EMERGENCIA / REGULARIZACIÓN (${codigoCorrelativo}) registrado por ${req.user.nombres} ${req.user.apellidos} vía ${finalCanalOrigen}. Justificación: ${justificacionEmergenciaFinal}`,
+          ipOrigen: req.ip,
+        });
+      } else {
+        await TicketModel.logAudit({
+          ticketId: newTicketId,
+          usuarioId: req.user.id,
+          accion: 'CREACION_TICKET',
+          valorNuevo: `${codigoCorrelativo} (${titulo})${referenciaUbicacion ? ` - Ref: ${referenciaUbicacion}` : ''}`,
+          ipOrigen: req.ip,
+        });
+      }
+
+      if (finalTecnicoId) {
+        await TicketModel.logAudit({
+          ticketId: newTicketId,
+          usuarioId: req.user.id,
+          accion: 'ASIGNACION_TECNICO',
+          valorNuevo: `Asignado directamente en creación a especialista técnico ID ${finalTecnicoId}`,
+          ipOrigen: req.ip,
+        });
+      }
 
       // Disparar notificaciones por correo de forma asíncrona no bloqueante
       (async () => {
         try {
-          const solicitanteUser = await UserModel.findById(req.user!.id);
+          const solicitanteUser = await UserModel.findById(finalSolicitanteId);
           if (solicitanteUser) {
             EmailService.notificarCreacionTicket(
               {
@@ -395,7 +472,9 @@ export class TicketController {
 
       return res.status(201).json({
         success: true,
-        message: 'Ticket de requerimiento creado exitosamente',
+        message: isEmergenciaFinal
+          ? 'Ticket de Emergencia / Regularización registrado y puesto en cola exitosamente'
+          : 'Ticket de requerimiento creado exitosamente',
         data: {
           id: newTicketId,
           codigoCorrelativo,
@@ -404,6 +483,7 @@ export class TicketController {
           urgencia: ticketUrgency,
           fechaApertura: new Date().toISOString(),
           fechaLimiteResolucion: fechaLimiteResolucion ? fechaLimiteResolucion.toISOString() : null,
+          esEmergencia: isEmergenciaFinal,
         },
       });
     } catch (error: any) {
