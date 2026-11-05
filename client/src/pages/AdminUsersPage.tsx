@@ -366,7 +366,7 @@ export const AdminUsersPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 w-full max-w-[1700px] mx-auto px-4 sm:px-6 py-6">
+    <div className="space-y-6 w-full max-w-[1700px] min-w-0 mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
       {/* Top Header Card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div>

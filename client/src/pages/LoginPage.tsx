@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { SearchableDependenciaSelect } from '../components/SearchableDependenciaSelect';
 import { ManualViewerModal } from '../components/ManualViewerModal';
@@ -26,10 +27,13 @@ import {
   Play,
   FileText,
   Film,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { loginWithLdap } = useAuth();
+  const { toggleTheme, isDark } = useTheme();
 
   // Background Image State
   const [selectedBg] = useState<'1.jpeg' | '2.JPG' | '3.JPG'>(() => {
@@ -178,46 +182,22 @@ export const LoginPage: React.FC = () => {
       <div className="fixed -bottom-40 -right-40 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Top Floating Help & Inducción Toolbar (Acceso Rápido Superior) */}
-      <header className="fixed top-3 sm:top-5 inset-x-0 z-40 px-4 sm:px-8 max-w-7xl mx-auto flex items-center justify-between pointer-events-none">
-        <div className="hidden md:flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-800 text-[11px] text-slate-300 pointer-events-auto shadow-lg">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-semibold">Plataforma Oficial de Mesa de Ayuda UNALM</span>
-        </div>
-
-        <div className="flex items-center space-x-2 sm:space-x-3 pointer-events-auto ml-auto">
-          {/* Botón Superior 1: Manual de Usuario (PDF) */}
-          <button
-            type="button"
-            onClick={() => setIsManualModalOpen(true)}
-            className="px-3 sm:px-4 py-2 rounded-full bg-slate-950/85 hover:bg-slate-900 text-slate-200 hover:text-white border border-slate-700/80 hover:border-sky-500/60 shadow-lg shadow-black/40 backdrop-blur-md text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer active:scale-95 group"
-            title="Consultar Manual de Usuario oficial en PDF"
-          >
-            <div className="w-5 h-5 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-              <BookOpen className="w-3 h-3 text-sky-300" />
-            </div>
-            <span>Manual de Usuario</span>
-            <span className="text-[10px] bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded font-black border border-sky-500/30">
-              PDF
-            </span>
-          </button>
-
-          {/* Botón Superior 2: Video Tutorial (HD) */}
-          <button
-            type="button"
-            onClick={() => setIsVideoModalOpen(true)}
-            className="px-3.5 sm:px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border border-emerald-400/50 shadow-lg shadow-emerald-950/60 backdrop-blur-md text-xs font-black transition-all flex items-center space-x-2 cursor-pointer active:scale-95 group"
-            title="Reproducir video tutorial de uso del sistema"
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-100" />
-            </span>
-            <Play className="w-3.5 h-3.5 fill-white text-white group-hover:scale-110 transition-transform" />
-            <span>Video Tutorial</span>
-          </button>
-        </div>
-      </header>
+      {/* Botón de Modo Oscuro / Claro en Pantalla de Login */}
+      <div className="fixed top-3 sm:top-5 right-3 sm:right-6 z-40">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={isDark ? 'Cambiar a Modo Claro (Día)' : 'Cambiar a Modo Oscuro (Noche)'}
+          aria-label="Alternar tema visual"
+          className="p-2 sm:p-2.5 rounded-2xl bg-slate-900/80 hover:bg-slate-800 text-amber-300 border border-slate-700/80 shadow-lg shadow-black/40 backdrop-blur-md transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center group"
+        >
+          {isDark ? (
+            <Sun className="w-4 h-4 text-amber-300 transition-transform group-hover:rotate-45" />
+          ) : (
+            <Moon className="w-4 h-4 text-amber-200 transition-transform group-hover:-rotate-12" />
+          )}
+        </button>
+      </div>
 
       <div className={`sm:mx-auto w-full ${authMode === 'register' ? 'sm:max-w-xl' : 'sm:max-w-md'} transition-all duration-300 relative z-20 px-4 sm:px-0`}>
         {/* Brand Header with Institutional Shield */}

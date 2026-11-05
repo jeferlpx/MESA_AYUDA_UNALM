@@ -232,7 +232,7 @@ export const AdminCatalogPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    <div className="space-y-6 w-full max-w-7xl min-w-0 overflow-hidden mx-auto px-3 sm:px-6 py-4 sm:py-6">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs">
         <div>

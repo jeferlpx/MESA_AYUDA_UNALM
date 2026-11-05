@@ -235,7 +235,7 @@ export const SGDashboardPage: React.FC<SGDashboardPageProps> = ({
   };
 
   return (
-    <div className="w-full max-w-[1720px] px-3 sm:px-6 lg:px-8 mx-auto pb-12 font-sans space-y-6">
+    <div className="w-full max-w-[1720px] min-w-0 overflow-hidden px-3 sm:px-6 lg:px-8 mx-auto pb-12 font-sans space-y-6">
       {/* =========================================================================
           REPORTE INSTITUCIONAL FORMAL PARA IMPRESIÓN / PDF (SOLO VISIBLE AL IMPRIMIR)
          ========================================================================= */}

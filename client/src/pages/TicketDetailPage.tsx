@@ -388,7 +388,7 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
   const backButtonLabel = isOwnerSolicitante ? 'Volver a Mis Requerimientos' : 'Volver al Listado de Tickets';
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 min-w-0 overflow-hidden">
       {/* Top Navigation & Breadcrumb */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button

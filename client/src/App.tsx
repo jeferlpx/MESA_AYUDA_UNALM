@@ -146,7 +146,7 @@ const MainLayout: React.FC = () => {
     Boolean(user && (user.debeCambiarPassword || user.correoPendiente || isMissingDependencia));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col print:min-h-0 print:bg-white transition-colors duration-150">
+    <div className="min-h-screen w-full max-w-full bg-slate-50 dark:bg-slate-950 flex flex-col overflow-x-hidden print:min-h-0 print:bg-white transition-colors duration-150">
       <Navbar
         onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -195,7 +195,7 @@ const MainLayout: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-1 print:block overflow-hidden">
+      <div className="flex flex-1 print:block overflow-hidden w-full max-w-full">
         {/* Desktop Sidebar (hidden on mobile) */}
         <div className="hidden md:flex shrink-0">
           <Sidebar
@@ -204,7 +204,7 @@ const MainLayout: React.FC = () => {
           />
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-hidden">
           <TopNavigationBar
             userRole={user?.rol}
             activeTab={safeActiveTab}
@@ -216,7 +216,7 @@ const MainLayout: React.FC = () => {
             onOpenEquipmentLookup={() => setIsEquipmentLookupOpen(true)}
           />
 
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-6 print:overflow-visible print:h-auto print:block print:p-0">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-6 print:overflow-visible print:h-auto print:block print:p-0 w-full max-w-full min-w-0">
             {selectedTicketId ? (
               <TicketDetailPage
                 ticketId={selectedTicketId}

@@ -89,7 +89,7 @@ export const AdminEquipmentPage: React.FC<AdminEquipmentPageProps> = ({ onSelect
   const bienesConcluidos = items.filter((i) => Number(i.tickets_activos) === 0).length;
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       {/* Encabezado Principal */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs transition-colors duration-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

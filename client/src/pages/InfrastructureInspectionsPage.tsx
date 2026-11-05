@@ -160,7 +160,7 @@ export const InfrastructureInspectionsPage: React.FC<InfrastructureInspectionsPa
   const edificiosUnicos = Array.from(new Set(inspections.map((i) => i.edificio)));
 
   return (
-    <div className="space-y-6 w-full max-w-[1700px] mx-auto px-4 sm:px-6 py-6">
+    <div className="space-y-6 w-full max-w-[1700px] min-w-0 mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
       {/* Top Banner Card */}
       <div className="bg-gradient-to-r from-amber-900 via-slate-900 to-amber-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl border border-amber-800/40 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="relative z-10 max-w-3xl">

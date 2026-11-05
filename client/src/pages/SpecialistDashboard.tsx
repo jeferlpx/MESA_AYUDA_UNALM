@@ -457,7 +457,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
   });
 
   return (
-    <div className="space-y-6 max-w-[1700px] w-full mx-auto px-4 sm:px-6 py-6 animate-in fade-in duration-300">
+    <div className="space-y-6 max-w-[1700px] w-full min-w-0 mx-auto px-3 sm:px-6 py-4 sm:py-6 animate-in fade-in duration-300 overflow-hidden">
       {/* Top Header Card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 sm:p-7 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <div>

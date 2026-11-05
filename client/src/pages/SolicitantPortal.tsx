@@ -677,46 +677,46 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
   const showPendingSurveysSection = viewMode === 'pending-surveys';
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 py-6">
+    <div className="space-y-6 sm:space-y-8 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-hidden">
       {/* =========================================================================
          SECCIÓN 1: CATÁLOGO DE SERVICIOS
          ========================================================================= */}
       {showCatalogSection && (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           {/* Institutional Banner */}
-          <div className="bg-gradient-to-r from-unalm-700 via-slate-800 to-amber-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+          <div className="bg-gradient-to-r from-unalm-700 via-slate-800 to-amber-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white shadow-xl relative overflow-hidden w-full">
             <div className="max-w-3xl relative z-10">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-amber-300 bg-black/30 px-3 py-1 rounded-full inline-block mb-3 border border-amber-300/30">
+              <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-amber-300 bg-black/30 px-3 py-1 rounded-full inline-block mb-3 border border-amber-300/30">
                 Soporte de servicios tecnológicos y servicios generales y mantenimiento
               </span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight leading-snug">
                 ¿En qué servicio o requerimiento podemos ayudarte hoy?
               </h1>
-              <p className="text-sm text-slate-300 mt-2 font-medium">
+              <p className="text-xs sm:text-sm text-slate-300 mt-2 font-medium">
                 Selecciona la categoría correspondiente para registrar una incidencia o solicitar un servicio oficial.
               </p>
 
               {/* Quick Search */}
-              <div className="mt-6 relative">
+              <div className="mt-5 sm:mt-6 relative w-full">
                 <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar servicio (Ej: Wi-Fi, Electricidad, Gasfitería, Correo, SIRA, Pintura, Climatización)..."
-                  className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl shadow-lg border border-transparent dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm font-medium transition-colors"
+                  className="w-full pl-12 pr-4 py-3 sm:py-3.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-2xl shadow-lg border border-transparent dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300 text-xs sm:text-sm font-medium transition-colors"
                 />
               </div>
             </div>
           </div>
 
           {/* Module Selector Tabs for Catalog */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl overflow-x-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3 w-full">
+            <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl overflow-x-auto max-w-full no-scrollbar min-w-0">
               <button
                 type="button"
                 onClick={() => setActiveCatalogModule('ALL')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+                className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shrink-0 ${
                   activeCatalogModule === 'ALL'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -735,7 +735,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveCatalogModule('OTIC')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+                className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shrink-0 ${
                   activeCatalogModule === 'OTIC'
                     ? 'bg-unalm-600 text-white shadow-xs ring-2 ring-emerald-400/30'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -752,7 +752,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveCatalogModule('SERVICIOS_GENERALES')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+                className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shrink-0 ${
                   activeCatalogModule === 'SERVICIOS_GENERALES'
                     ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-400/30'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -767,7 +767,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               </button>
             </div>
 
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 self-start sm:self-auto shrink-0">
               {filteredCategories.length} Servicios Disponibles
             </span>
           </div>
@@ -867,12 +867,12 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
           </div>
 
           {/* Module Filter Tabs for My Tickets */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 md:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl w-full sm:w-auto">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full">
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl overflow-x-auto max-w-full no-scrollbar min-w-0">
               <button
                 type="button"
                 onClick={() => setActiveTicketModule('ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   activeTicketModule === 'ALL'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -883,7 +883,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTicketModule('OTIC')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   activeTicketModule === 'OTIC'
                     ? 'bg-unalm-600 text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -894,7 +894,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTicketModule('SERVICIOS_GENERALES')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   activeTicketModule === 'SERVICIOS_GENERALES'
                     ? 'bg-amber-600 text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -905,11 +905,11 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
             </div>
 
             {/* Status Filter Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 md:flex md:items-center gap-1.5 md:gap-1 bg-slate-100 dark:bg-slate-800/80 p-1.5 md:p-1 rounded-2xl md:rounded-xl w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl overflow-x-auto max-w-full no-scrollbar min-w-0">
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('ALL')}
-                className={`col-span-2 sm:col-span-1 px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   ticketStatusFilter === 'ALL'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -920,7 +920,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('REPORTADO')}
-                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   ticketStatusFilter === 'REPORTADO'
                     ? 'bg-amber-500 text-slate-950 shadow-xs font-extrabold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -931,7 +931,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('OBSERVADO')}
-                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   ticketStatusFilter === 'OBSERVADO'
                     ? 'bg-amber-600 text-white shadow-xs font-extrabold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -942,7 +942,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('ASIGNADO')}
-                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   ticketStatusFilter === 'ASIGNADO'
                     ? 'bg-blue-600 text-white shadow-xs font-extrabold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -953,7 +953,7 @@ export const SolicitantPortal: React.FC<SolicitantPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketStatusFilter('RESUELTO')}
-                className={`w-full px-3 py-2 md:py-1.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer shrink-0 ${
                   ticketStatusFilter === 'RESUELTO'
                     ? 'bg-emerald-600 text-white shadow-xs font-extrabold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'

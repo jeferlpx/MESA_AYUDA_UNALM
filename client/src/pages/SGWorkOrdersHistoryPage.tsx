@@ -306,7 +306,7 @@ export const SGWorkOrdersHistoryPage: React.FC<SGWorkOrdersHistoryPageProps> = (
   const totalPendientes = filteredTickets.filter((t) => t.estado === 'REPORTADO').length;
 
   return (
-    <div className="space-y-6 w-full max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-6">
+    <div className="space-y-6 w-full max-w-[1720px] min-w-0 mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-hidden">
       
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-amber-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">

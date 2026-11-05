@@ -149,7 +149,7 @@ export const TechnicianAttendedTicketsPage: React.FC<TechnicianAttendedTicketsPa
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6 animate-in fade-in duration-300">
+    <div className="space-y-6 w-full max-w-7xl min-w-0 mx-auto px-3 sm:px-6 py-4 sm:py-6 animate-in fade-in duration-300 overflow-hidden">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-unalm-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
