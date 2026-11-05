@@ -67,6 +67,8 @@ export const TopNavigationBar: React.FC<TopNavigationBarProps> = ({
         return 'Inventario de Materiales';
       case 'infrastructure-inspections':
         return 'Inspecciones SIGI';
+      case 'admin-ad-requests':
+        return 'Solicitudes Directorio Activo';
       default:
         return 'Mesa de Ayuda';
     }

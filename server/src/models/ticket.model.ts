@@ -41,7 +41,8 @@ export class TicketModel {
               CONCAT(creator.nombres, ' ', creator.apellidos) as creado_por_nombre,
               creator.email as creado_por_email,
               es.puntuacion as encuesta_puntuacion,
-              es.comentario as encuesta_comentario
+              es.comentario as encuesta_comentario,
+              (SELECT COUNT(id) FROM tickets WHERE ticket_principal_id = t.id) as total_anidados
        FROM tickets t
        INNER JOIN usuarios sol ON t.solicitante_id = sol.id
        LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
@@ -83,6 +84,34 @@ export class TicketModel {
     ticket.tecnicos_asignados = allTecs;
     ticket.tecnicos_adicionales = allTecs.filter((t) => t.rol_asignacion === 'APOYO');
 
+    // Obtener tickets anidados/unificados en este ticket (si es ticket principal)
+    const [nestedRows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT t.id, t.codigo_correlativo, t.titulo, t.descripcion, t.estado, t.creado_en, t.motivo_fusion,
+              CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre
+       FROM tickets t
+       INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+       WHERE t.ticket_principal_id = ?
+       ORDER BY t.id ASC`,
+      [ticket.id]
+    );
+    ticket.tickets_anidados = nestedRows as any[];
+    ticket.total_anidados = nestedRows.length;
+
+    // Si este ticket fue anidado en otro ticket principal
+    if (ticket.ticket_principal_id) {
+      const [principalRows] = await dbPool.query<RowDataPacket[]>(
+        `SELECT t.id, t.codigo_correlativo, t.titulo, t.estado,
+                CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre
+         FROM tickets t
+         INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+         WHERE t.id = ?`,
+        [ticket.ticket_principal_id]
+      );
+      if (principalRows.length > 0) {
+        ticket.ticket_principal = principalRows[0] as any;
+      }
+    }
+
     return ticket;
   }
 
@@ -109,7 +138,8 @@ export class TicketModel {
               CONCAT(creator.nombres, ' ', creator.apellidos) as creado_por_nombre,
               creator.email as creado_por_email,
               es.puntuacion as encuesta_puntuacion,
-              es.comentario as encuesta_comentario
+              es.comentario as encuesta_comentario,
+              (SELECT COUNT(id) FROM tickets WHERE ticket_principal_id = t.id) as total_anidados
        FROM tickets t
        INNER JOIN usuarios sol ON t.solicitante_id = sol.id
        LEFT JOIN usuarios tec ON t.tecnico_id = tec.id
@@ -150,6 +180,34 @@ export class TicketModel {
 
     ticket.tecnicos_asignados = allTecs;
     ticket.tecnicos_adicionales = allTecs.filter((t) => t.rol_asignacion === 'APOYO');
+
+    // Obtener tickets anidados/unificados en este ticket (si es ticket principal)
+    const [nestedRows] = await dbPool.query<RowDataPacket[]>(
+      `SELECT t.id, t.codigo_correlativo, t.titulo, t.descripcion, t.estado, t.creado_en, t.motivo_fusion,
+              CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre
+       FROM tickets t
+       INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+       WHERE t.ticket_principal_id = ?
+       ORDER BY t.id ASC`,
+      [ticket.id]
+    );
+    ticket.tickets_anidados = nestedRows as any[];
+    ticket.total_anidados = nestedRows.length;
+
+    // Si este ticket fue anidado en otro ticket principal
+    if (ticket.ticket_principal_id) {
+      const [principalRows] = await dbPool.query<RowDataPacket[]>(
+        `SELECT t.id, t.codigo_correlativo, t.titulo, t.estado,
+                CONCAT(sol.nombres, ' ', sol.apellidos) as solicitante_nombre
+         FROM tickets t
+         INNER JOIN usuarios sol ON t.solicitante_id = sol.id
+         WHERE t.id = ?`,
+        [ticket.ticket_principal_id]
+      );
+      if (principalRows.length > 0) {
+        ticket.ticket_principal = principalRows[0] as any;
+      }
+    }
 
     return ticket;
   }
@@ -227,6 +285,8 @@ export class TicketModel {
     if (filters.estado) {
       sql += ` AND t.estado = ?`;
       params.push(filters.estado);
+    } else {
+      sql += ` AND (t.estado != 'FUSIONADO' OR t.estado IS NULL)`;
     }
 
     if (filters.canalOrigen) {
@@ -1003,6 +1063,185 @@ export class TicketModel {
       throw err;
     } finally {
       conn.release();
+    }
+  }
+
+  static async mergeTickets(params: {
+    ticketPrincipalId: number;
+    ticketSecundariosIds: number[];
+    motivo: string;
+    usuarioId: number;
+    usuarioNombre: string;
+    usuarioRol: RoleCode;
+  }): Promise<{ success: boolean; principalCode: string; mergedCount: number }> {
+    const { ticketPrincipalId, ticketSecundariosIds, motivo, usuarioId, usuarioNombre } = params;
+
+    if (!ticketPrincipalId || !ticketSecundariosIds || ticketSecundariosIds.length === 0) {
+      throw new Error('Debe especificar el ticket principal y al menos un ticket secundario para fusionar');
+    }
+
+    const filteredSecundarios = ticketSecundariosIds.filter((id) => id !== ticketPrincipalId);
+    if (filteredSecundarios.length === 0) {
+      throw new Error('El ticket principal no puede fusionarse consigo mismo');
+    }
+
+    const connection = await dbPool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // 1. Obtener ticket principal
+      const [principalRows] = await connection.query<RowDataPacket[]>(
+        'SELECT id, codigo_correlativo, solicitante_id FROM tickets WHERE id = ?',
+        [ticketPrincipalId]
+      );
+      if (principalRows.length === 0) {
+        throw new Error('El ticket principal seleccionado no existe');
+      }
+      const principal = principalRows[0];
+
+      // 2. Obtener tickets secundarios
+      const [secundariosRows] = await connection.query<RowDataPacket[]>(
+        'SELECT id, codigo_correlativo FROM tickets WHERE id IN (?)',
+        [filteredSecundarios]
+      );
+      const codigosSecundarios = (secundariosRows as any[]).map((r) => r.codigo_correlativo);
+
+      // 3. Actualizar tickets secundarios a FUSIONADO y apuntar al principal
+      await connection.query(
+        `UPDATE tickets 
+         SET ticket_principal_id = ?,
+             estado = 'FUSIONADO',
+             motivo_fusion = ?,
+             fusionado_en = NOW(),
+             fusionado_por_id = ?
+         WHERE id IN (?)`,
+        [ticketPrincipalId, motivo, usuarioId, filteredSecundarios]
+      );
+
+      // 4. Agregar notas y trazabilidad en tickets secundarios
+      for (const sec of secundariosRows as any[]) {
+        await connection.query(
+          `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+           VALUES (?, ?, ?, 1, NOW())`,
+          [
+            sec.id,
+            usuarioId,
+            `🔒 TICKET ANIDADO / UNIFICADO: Este ticket fue integrado y anidado al Ticket Principal #${principal.codigo_correlativo} por ${usuarioNombre}. Motivo: ${motivo}. Su atención y resolución se gestionará desde el ticket principal.`
+          ]
+        );
+
+        await connection.query(
+          `INSERT INTO ticket_auditoria (ticket_id, usuario_id, accion, detalles)
+           VALUES (?, ?, 'FUSION_ANIDACION', ?)`,
+          [
+            sec.id,
+            usuarioId,
+            `Ticket anidado en ticket principal #${principal.codigo_correlativo}. Motivo: ${motivo}`
+          ]
+        );
+      }
+
+      // 5. Agregar nota de trazabilidad en el ticket principal
+      await connection.query(
+        `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+         VALUES (?, ?, ?, 1, NOW())`,
+        [
+          ticketPrincipalId,
+          usuarioId,
+          `📎 TICKETS UNIFICADOS: Se anidaron e integraron a esta atención los tickets: ${codigosSecundarios.join(', ')}. Unificado por: ${usuarioNombre}. Motivo: ${motivo}.`
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO ticket_auditoria (ticket_id, usuario_id, accion, detalles)
+         VALUES (?, ?, 'FUSION_ANIDACION', ?)`,
+        [
+          ticketPrincipalId,
+          usuarioId,
+          `Se anidaron los tickets ${codigosSecundarios.join(', ')}. Motivo: ${motivo}`
+        ]
+      );
+
+      await connection.commit();
+      return {
+        success: true,
+        principalCode: principal.codigo_correlativo,
+        mergedCount: filteredSecundarios.length
+      };
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  }
+
+  static async unmergeTicket(params: {
+    ticketId: number;
+    usuarioId: number;
+    usuarioNombre: string;
+  }): Promise<void> {
+    const { ticketId, usuarioId, usuarioNombre } = params;
+    const connection = await dbPool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [rows] = await connection.query<RowDataPacket[]>(
+        'SELECT id, codigo_correlativo, ticket_principal_id, tecnico_id FROM tickets WHERE id = ?',
+        [ticketId]
+      );
+      if (rows.length === 0) throw new Error('Ticket no encontrado');
+      const ticket = rows[0];
+
+      if (!ticket.ticket_principal_id) {
+        throw new Error('Este ticket no está anidado en ningún otro ticket');
+      }
+
+      const [pRows] = await connection.query<RowDataPacket[]>(
+        'SELECT codigo_correlativo FROM tickets WHERE id = ?',
+        [ticket.ticket_principal_id]
+      );
+      const principalCode = pRows.length > 0 ? pRows[0].codigo_correlativo : `#${ticket.ticket_principal_id}`;
+
+      const nuevoEstado = ticket.tecnico_id ? 'ASIGNADO' : 'REPORTADO';
+
+      await connection.query(
+        `UPDATE tickets
+         SET ticket_principal_id = NULL,
+             estado = ?,
+             motivo_fusion = NULL,
+             fusionado_en = NULL,
+             fusionado_por_id = NULL
+         WHERE id = ?`,
+        [nuevoEstado, ticketId]
+      );
+
+      await connection.query(
+        `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+         VALUES (?, ?, ?, 1, NOW())`,
+        [
+          ticketId,
+          usuarioId,
+          `🔓 TICKET DESANIDADO: Separado del Ticket Principal #${principalCode} por ${usuarioNombre}. Reanudando su gestión independiente.`
+        ]
+      );
+
+      await connection.query(
+        `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+         VALUES (?, ?, ?, 1, NOW())`,
+        [
+          ticket.ticket_principal_id,
+          usuarioId,
+          `🔓 TICKET SEPARADO: El ticket #${ticket.codigo_correlativo} fue desanidado de esta atención por ${usuarioNombre}.`
+        ]
+      );
+
+      await connection.commit();
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
     }
   }
 }

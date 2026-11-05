@@ -60,7 +60,7 @@ export async function runDatabaseMigrations(): Promise<void> {
       }
     }
 
-    // 4. Asegurar que tickets.estado acepte los estados ITIL y de Servicios Generales
+    // 4. Asegurar que tickets.estado acepte los estados ITIL, Servicios Generales y FUSIONADO
     try {
       await connection.query(`
         ALTER TABLE tickets 
@@ -77,7 +77,8 @@ export async function runDatabaseMigrations(): Promise<void> {
           'PENDIENTE_USUARIO',
           'CERRADO',
           'REABIERTO',
-          'OBSERVADO'
+          'OBSERVADO',
+          'FUSIONADO'
         ) NOT NULL DEFAULT 'REPORTADO'
       `);
     } catch (e) {}
@@ -86,7 +87,7 @@ export async function runDatabaseMigrations(): Promise<void> {
     await connection.query(`UPDATE tickets SET estado = 'REPORTADO' WHERE estado = 'NUEVO'`);
     await connection.query(`UPDATE tickets SET estado = 'RESUELTO' WHERE estado = 'CERRADO'`);
 
-    // 4.1 Asegurar columnas especializadas para Servicios Generales (Campo, Taller y Materiales)
+    // 4.1 Asegurar columnas especializadas para Servicios Generales y Fusión/Anidación de Tickets
     const sgTicketColumns = [
       { name: 'contacto_local', type: 'VARCHAR(150) NULL' },
       { name: 'horario_acceso', type: 'VARCHAR(150) NULL' },
@@ -100,6 +101,10 @@ export async function runDatabaseMigrations(): Promise<void> {
       { name: 'es_emergencia', type: 'TINYINT(1) NOT NULL DEFAULT 0' },
       { name: 'justificacion_emergencia', type: 'TEXT NULL' },
       { name: 'creado_por_id', type: 'INT NULL' },
+      { name: 'ticket_principal_id', type: 'INT NULL' },
+      { name: 'motivo_fusion', type: 'TEXT NULL' },
+      { name: 'fusionado_en', type: 'DATETIME NULL' },
+      { name: 'fusionado_por_id', type: 'INT NULL' },
     ];
 
     for (const col of sgTicketColumns) {
@@ -118,6 +123,10 @@ export async function runDatabaseMigrations(): Promise<void> {
 
     try {
       await connection.query(`ALTER TABLE tickets ADD INDEX idx_tickets_es_emergencia (es_emergencia)`);
+    } catch (e: any) {}
+
+    try {
+      await connection.query(`ALTER TABLE tickets ADD INDEX idx_tickets_principal (ticket_principal_id)`);
     } catch (e: any) {}
 
     // 5. Asegurar que tickets.urgencia soporte CRITICA
@@ -140,9 +149,24 @@ export async function runDatabaseMigrations(): Promise<void> {
         celular VARCHAR(30) NOT NULL,
         anexo VARCHAR(20) NULL,
         estado ENUM('PENDIENTE', 'CREADO', 'RECHAZADO') NOT NULL DEFAULT 'PENDIENTE',
+        observacion TEXT NULL,
+        procesado_en DATETIME NULL,
+        procesado_por VARCHAR(150) NULL,
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Columnas adicionales para solicitudes_cuenta_ad si ya existía
+    const adCols = [
+      { name: 'observacion', type: 'TEXT NULL' },
+      { name: 'procesado_en', type: 'DATETIME NULL' },
+      { name: 'procesado_por', type: 'VARCHAR(150) NULL' }
+    ];
+    for (const c of adCols) {
+      try {
+        await connection.query(`ALTER TABLE solicitudes_cuenta_ad ADD COLUMN ${c.name} ${c.type}`);
+      } catch (e: any) {}
+    }
 
     // 5.2 Tabla para Múltiples Roles por Usuario (RBAC Multirole)
     await connection.query(`

@@ -50,11 +50,14 @@ import {
   Laptop,
   AlertOctagon,
   Trash2,
+  GitMerge,
+  Link2,
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
 import { EmergencyTicketModal } from '../components/EmergencyTicketModal';
 import { PurgeTicketsModal } from '../components/PurgeTicketsModal';
+import { MergeTicketsModal } from '../components/MergeTicketsModal';
 
 interface SpecialistDashboardProps {
   onSelectTicketDetail: (ticketId: number, ticketCode?: string, ticketStatus?: string) => void;
@@ -73,9 +76,11 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
   const [selectedTicketIds, setSelectedTicketIds] = useState<number[]>([]);
   const [isPurgeModalOpen, setIsPurgeModalOpen] = useState<boolean>(false);
   const [purgeInitialMode, setPurgeInitialMode] = useState<'selected' | 'all'>('selected');
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState<boolean>(false);
 
   const isSGUser = hasRole('MESA_AYUDA_SG', 'TECNICO_SG', 'SUPERVISOR_SG');
   const isMesaAyudaOrAdmin = hasRole('MESA_AYUDA', 'MESA_AYUDA_SG', 'ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG');
+  const canSelectTickets = hasRole('ADMIN', 'MESA_AYUDA', 'MESA_AYUDA_SG', 'SUPERVISOR', 'SUPERVISOR_SG');
   const hasTechRole = hasRole('TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG');
   const isTechnicianOnly = hasTechRole && !isMesaAyudaOrAdmin;
 
@@ -161,6 +166,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
     asignados: number;
     resueltos: number;
     sigiPreventiva: number;
+    anidados: number;
     total: number;
   }>({
     reportados: 0,
@@ -168,6 +174,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
     asignados: 0,
     resueltos: 0,
     sigiPreventiva: 0,
+    anidados: 0,
     total: 0,
   });
 
@@ -190,16 +197,17 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
       if (filterCategory) params.categoriaId = filterCategory;
       // En colas de no asignados los tickets no tienen técnico asignado
-      if (filterTechnician && activeQueueTab !== 'REPORTADO' && activeQueueTab !== 'OBSERVADO' && activeQueueTab !== 'SIGI_PREVENTIVA') {
+      if (filterTechnician && activeQueueTab !== 'REPORTADO' && activeQueueTab !== 'OBSERVADO' && activeQueueTab !== 'SIGI_PREVENTIVA' && activeQueueTab !== 'FUSIONADO') {
         params.tecnicoId = filterTechnician;
       }
       if (searchQuery) params.search = searchQuery;
 
-      const [tickRes, techRes, catRes, allTicketsRes] = await Promise.all([
+      const [tickRes, techRes, catRes, allTicketsRes, fusedTicketsRes] = await Promise.all([
         api.getTickets(params),
         api.getTechnicians(userModule ? { modulo: userModule } : undefined),
         api.getCategories(userModule ? { modulo: userModule } : undefined),
         api.getTickets(), // Para calcular los contadores globales de las pestañas
+        api.getTickets({ estado: 'FUSIONADO' }), // Tickets anidados
       ]);
 
       if (tickRes.success) setTickets(tickRes.data);
@@ -207,12 +215,14 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
       if (catRes.success) setCategories(catRes.data);
       if (allTicketsRes.success) {
         const allList: Ticket[] = allTicketsRes.data || [];
+        const fusedCount = fusedTicketsRes.success && fusedTicketsRes.data ? fusedTicketsRes.data.length : 0;
         setCounts({
           reportados: allList.filter((t) => t.estado === 'REPORTADO' && t.canal_origen !== 'INSPECCION_SIGI').length,
           observados: allList.filter((t) => t.estado === 'OBSERVADO').length,
           sigiPreventiva: allList.filter((t) => t.canal_origen === 'INSPECCION_SIGI' && t.estado === 'REPORTADO').length,
           asignados: allList.filter((t) => t.estado === 'ASIGNADO').length,
           resueltos: allList.filter((t) => t.estado === 'RESUELTO').length,
+          anidados: fusedCount,
           total: allList.length,
         });
       }
@@ -434,12 +444,12 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
 
   const columnCount = useMemo(() => {
     let count = 6; // codigo, titulo, categoria, fecha, urgencia, acciones
-    if (isAdmin) count += 1; // checkbox seleccion
+    if (canSelectTickets) count += 1; // checkbox seleccion
     if (activeQueueTab === 'ASIGNADO') count += 1; // dias/horas sin atender
     if (activeQueueTab !== 'REPORTADO') count += 1; // estado
     if (!isTechnicianOnly && activeQueueTab !== 'REPORTADO') count += 1; // tecnico
     return count;
-  }, [activeQueueTab, isTechnicianOnly, isAdmin]);
+  }, [activeQueueTab, isTechnicianOnly, canSelectTickets]);
 
   const pendingCount = tickets.filter((t) => t.estado === 'REPORTADO').length;
 
@@ -663,6 +673,30 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
             {counts.total}
           </span>
         </button>
+
+        {isMesaAyudaOrAdmin && (
+          <button
+            onClick={() => setActiveQueueTab('FUSIONADO')}
+            className={`w-full md:w-auto px-3 sm:px-4 py-2.5 md:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between md:justify-start space-x-2 shrink-0 ${activeQueueTab === 'FUSIONADO'
+              ? 'bg-indigo-600 text-white shadow-md font-extrabold ring-1 ring-indigo-400'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+              }`}
+            title="Ver tickets duplicados que han sido unificados y anidados en un ticket principal"
+          >
+            <div className="flex items-center space-x-2 min-w-0">
+              <GitMerge className="w-4 h-4 shrink-0 text-indigo-400" />
+              <span className="truncate">ANIDADOS <span className="hidden sm:inline">(Unificados)</span></span>
+            </div>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${activeQueueTab === 'FUSIONADO'
+                ? 'bg-white text-indigo-900'
+                : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300'
+                }`}
+            >
+              {counts.anidados}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Filter Control Bar */}
@@ -729,7 +763,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
           <table className="w-full text-left text-xs border-collapse min-w-[980px]">
             <thead>
               <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 select-none">
-                {isAdmin && (
+                {canSelectTickets && (
                   <th className="py-3.5 px-3 w-[42px] text-center">
                     <input
                       type="checkbox"
@@ -746,7 +780,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                           setSelectedTicketIds(selectedTicketIds.filter((id) => !curPageIds.has(id)));
                         }
                       }}
-                      className="rounded text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer"
+                      className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                       title="Seleccionar / deseleccionar todos los tickets visibles"
                     />
                   </th>
@@ -887,7 +921,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
-                    {isAdmin && (
+                    {canSelectTickets && (
                       <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -899,7 +933,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                               setSelectedTicketIds(selectedTicketIds.filter((id) => id !== t.id));
                             }
                           }}
-                          className="rounded text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer"
+                          className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                         />
                       </td>
                     )}
@@ -911,6 +945,24 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                           }`}>
                           {t.codigo_correlativo}
                         </span>
+                        {Boolean(t.total_anidados && t.total_anidados > 0) && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-100 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-800 w-fit"
+                            title={`${t.total_anidados} ticket(s) anidado(s) y consolidados en esta atención`}
+                          >
+                            <GitMerge className="w-2.5 h-2.5 text-indigo-600 dark:text-indigo-400" />
+                            <span>+{t.total_anidados} Anidado{(t.total_anidados ?? 0) > 1 ? 's' : ''}</span>
+                          </span>
+                        )}
+                        {Boolean(t.ticket_principal_id) && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 w-fit"
+                            title="Este ticket está anidado dentro de un ticket principal"
+                          >
+                            <Link2 className="w-2.5 h-2.5 text-slate-500" />
+                            <span>Anidado</span>
+                          </span>
+                        )}
                         {Boolean(t.es_emergencia) && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-2xs w-fit animate-pulse">
                             🚨 EMERGENCIA
@@ -1149,7 +1201,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                   {/* Encabezado: Código, Módulo, Urgencia y Estado */}
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
-                      {isAdmin && (
+                      {canSelectTickets && (
                         <input
                           type="checkbox"
                           checked={selectedTicketIds.includes(t.id)}
@@ -1160,7 +1212,7 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                               setSelectedTicketIds(selectedTicketIds.filter((id) => id !== t.id));
                             }
                           }}
-                          className="rounded text-red-600 focus:ring-red-500 w-4 h-4 mr-1 cursor-pointer"
+                          className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 mr-1 cursor-pointer"
                         />
                       )}
                       <span className={`px-2 py-0.5 rounded-lg border font-mono text-xs font-extrabold ${
@@ -1170,6 +1222,18 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
                       }`}>
                         {t.codigo_correlativo}
                       </span>
+                      {Boolean(t.total_anidados && t.total_anidados > 0) && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-100 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-300">
+                          <GitMerge className="w-2.5 h-2.5" />
+                          <span>+{t.total_anidados}</span>
+                        </span>
+                      )}
+                      {Boolean(t.ticket_principal_id) && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300">
+                          <Link2 className="w-2.5 h-2.5" />
+                          <span>Anidado</span>
+                        </span>
+                      )}
                       {Boolean(t.es_emergencia) && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-2xs animate-pulse">
                           🚨 EMERGENCIA
@@ -2205,27 +2269,44 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
         />
       )}
 
-      {/* Barra Flotante de Acciones en Lote (Solo Admin General con Tickets Seleccionados) */}
-      {isAdmin && selectedTicketIds.length > 0 && (
+      {/* Barra Flotante de Acciones en Lote (Mesa de Ayuda & Admin con Tickets Seleccionados) */}
+      {canSelectTickets && selectedTicketIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center space-x-3.5 animate-in slide-in-from-bottom-4 duration-200">
           <div className="flex items-center space-x-2 text-xs font-bold">
-            <span className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center font-black text-[11px] shadow-sm">
+            <span className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black text-[11px] shadow-sm">
               {selectedTicketIds.length}
             </span>
             <span className="text-slate-200">ticket(s) seleccionado(s)</span>
           </div>
           <div className="h-4 w-px bg-slate-700" />
-          <button
-            type="button"
-            onClick={() => {
-              setPurgeInitialMode('selected');
-              setIsPurgeModalOpen(true);
-            }}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center space-x-1.5 cursor-pointer active:scale-95"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Eliminar con PIN</span>
-          </button>
+
+          {/* Botón para Unificar y Anidar Tickets Duplicados (Mesa de Ayuda & Admin con 2 o más tickets) */}
+          {selectedTicketIds.length >= 2 && (
+            <button
+              type="button"
+              onClick={() => setIsMergeModalOpen(true)}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center space-x-1.5 cursor-pointer active:scale-95"
+              title="Unificar los tickets seleccionados en uno solo (ITIL v4)"
+            >
+              <GitMerge className="w-3.5 h-3.5" />
+              <span>Unificar en 1 Ticket ({selectedTicketIds.length})</span>
+            </button>
+          )}
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                setPurgeInitialMode('selected');
+                setIsPurgeModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center space-x-1.5 cursor-pointer active:scale-95"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Eliminar con PIN</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setSelectedTicketIds([])}
@@ -2234,6 +2315,20 @@ export const SpecialistDashboard: React.FC<SpecialistDashboardProps> = ({ onSele
             Deseleccionar
           </button>
         </div>
+      )}
+
+      {/* Modal: Unificar y Anidar Tickets Duplicados (Mesa de Ayuda & Admin) */}
+      {isMergeModalOpen && (
+        <MergeTicketsModal
+          isOpen={isMergeModalOpen}
+          onClose={() => setIsMergeModalOpen(false)}
+          selectedTickets={tickets.filter((t) => selectedTicketIds.includes(t.id))}
+          onMergeSuccess={(principalCode, mergedCount) => {
+            setSelectedTicketIds([]);
+            toast.success(`Se anidaron exitosamente ${mergedCount} ticket(s) en el Ticket Principal #${principalCode}`);
+            loadData();
+          }}
+        />
       )}
 
       {/* Modal: Depuración y Eliminación Segura de Tickets con PIN Maestro */}

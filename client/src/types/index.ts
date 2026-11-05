@@ -34,7 +34,8 @@ export type TicketStatus =
   | 'ASIGNADO'
   | 'EN_EJECUCION'
   | 'RESUELTO'
-  | 'OBSERVADO';
+  | 'OBSERVADO'
+  | 'FUSIONADO';
 
 export interface User {
   id: number;
@@ -147,8 +148,47 @@ export interface Ticket {
   actualizado_en: string;
   encuesta_puntuacion?: number;
   encuesta_comentario?: string;
+  ticket_principal_id?: number | null;
+  motivo_fusion?: string | null;
+  fusionado_en?: string | null;
+  fusionado_por_id?: number | null;
+  fusionado_por_nombre?: string | null;
+  total_anidados?: number;
+  tickets_anidados?: Array<{
+    id: number;
+    codigo_correlativo: string;
+    titulo: string;
+    descripcion: string;
+    estado: string;
+    solicitante_nombre: string;
+    creado_en: string;
+    motivo_fusion?: string;
+  }>;
+  ticket_principal?: {
+    id: number;
+    codigo_correlativo: string;
+    titulo: string;
+    estado: string;
+    solicitante_nombre: string;
+  } | null;
   tecnicos_asignados?: AssignedTechnician[];
   tecnicos_adicionales?: AssignedTechnician[];
+}
+
+export interface SolicitudCuentaAD {
+  id: number;
+  nombre_completo: string;
+  dni: string;
+  condicion: string;
+  email: string;
+  facultad_dependencia: string;
+  celular: string;
+  anexo?: string | null;
+  estado: 'PENDIENTE' | 'CREADO' | 'RECHAZADO';
+  observacion?: string | null;
+  procesado_en?: string | null;
+  procesado_por?: string | null;
+  creado_en: string;
 }
 
 export interface AssignedTechnician {

@@ -47,6 +47,9 @@ import {
   History,
   AlertOctagon,
   Trash2,
+  GitMerge,
+  Link2,
+  ArrowRight,
 } from 'lucide-react';
 import { EquipmentHistoryModal } from '../components/EquipmentHistoryModal';
 
@@ -385,6 +388,25 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
     ((Date.now() - new Date(ticket.fecha_resolucion).getTime()) / (1000 * 60 * 60 * 24)) <= 5
   );
 
+  const handleUnmergeTicket = async (targetTicketId?: number) => {
+    const idToUnmerge = targetTicketId || ticket?.id;
+    if (!idToUnmerge) return;
+    if (!window.confirm('¿Está seguro de que desea desanidar este ticket para que vuelva a su atención independiente?')) {
+      return;
+    }
+    try {
+      const res = await api.unmergeTicket(idToUnmerge);
+      if (res.success) {
+        toast.success(res.message || 'Ticket desanidado exitosamente.');
+        await loadTicketData();
+      } else {
+        toast.error(res.message || 'Error al desanidar ticket');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error de comunicación al desanidar ticket');
+    }
+  };
+
   const backButtonLabel = isOwnerSolicitante ? 'Volver a Mis Requerimientos' : 'Volver al Listado de Tickets';
 
   return (
@@ -514,6 +536,149 @@ export const TicketDetailPage: React.FC<TicketDetailPageProps> = ({ ticketId, on
         <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
           {ticket.titulo}
         </h1>
+
+        {/* Banner Informativo si este ticket está unificado / anidado dentro de otro */}
+        {Boolean(ticket.ticket_principal_id) && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-blue-950/40 border border-indigo-200 dark:border-indigo-800/80 text-indigo-950 dark:text-indigo-200 space-y-3 shadow-xs animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+              <div className="flex items-start space-x-3">
+                <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-xs shrink-0 mt-0.5">
+                  <GitMerge className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-extrabold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                    <span>Ticket Unificado y Anidado</span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-indigo-200/80 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-200 rounded-lg">
+                      ESTADO: FUSIONADO
+                    </span>
+                  </h4>
+                  <p className="text-xs text-indigo-800/90 dark:text-indigo-300 leading-relaxed">
+                    Este requerimiento fue unificado dentro del Ticket Principal{' '}
+                    <strong className="font-mono text-indigo-950 dark:text-white">
+                      #{ticket.ticket_principal?.codigo_correlativo || ticket.ticket_principal_id}
+                    </strong>
+                    {ticket.ticket_principal?.titulo ? `: "${ticket.ticket_principal.titulo}"` : ''}.
+                    La atención técnica y el cierre se gestionan desde el ticket maestro.
+                  </p>
+                  {ticket.motivo_fusion && (
+                    <p className="text-xs text-indigo-800 dark:text-indigo-300 italic pt-1">
+                      <strong>Motivo de unificación:</strong> "{ticket.motivo_fusion}"
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                {ticket.ticket_principal_id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (ticket.ticket_principal_id) {
+                        window.history.pushState({}, '', '');
+                        window.location.hash = `#ticket-${ticket.ticket_principal_id}`;
+                        window.location.reload();
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <span>Ir al Ticket Principal</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {isMesaAyudaOrAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleUnmergeTicket()}
+                    className="px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
+                    title="Separar este ticket para gestionarlo de forma independiente"
+                  >
+                    <span>Desanidar</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Card de Tickets Anidados a esta Atención (si es Ticket Maestro) */}
+        {ticket.tickets_anidados && ticket.tickets_anidados.length > 0 && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/90 dark:border-indigo-800/60 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-indigo-950 dark:text-indigo-200">
+                <GitMerge className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h4 className="text-sm font-black">
+                  Tickets Anidados a esta Atención ({ticket.tickets_anidados.length})
+                </h4>
+              </div>
+              <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-bold bg-indigo-100 dark:bg-indigo-900/50 px-2.5 py-0.5 rounded-full">
+                Consolidados en este Ticket Principal
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {ticket.tickets_anidados.map((child: any) => (
+                <div
+                  key={child.id}
+                  className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-indigo-100 dark:border-slate-700 flex flex-col justify-between space-y-2.5 shadow-2xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-black text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-950/70 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                        {child.codigo_correlativo}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {new Date(child.creado_en).toLocaleString('es-PE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 line-clamp-1">
+                      {child.titulo}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+                      {child.descripcion}
+                    </p>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-300 font-medium">
+                      Solicitante: <strong>{child.solicitante_nombre}</strong>
+                    </p>
+                    {child.motivo_fusion && (
+                      <p className="text-[10px] text-indigo-700 dark:text-indigo-400 italic bg-indigo-50/50 dark:bg-indigo-950/40 p-1.5 rounded-lg">
+                        <strong>Motivo:</strong> "{child.motivo_fusion}"
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.location.hash = `#ticket-${child.id}`;
+                        window.location.reload();
+                      }}
+                      className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer"
+                    >
+                      Ver requerimiento anidado →
+                    </button>
+                    {isMesaAyudaOrAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => handleUnmergeTicket(child.id)}
+                        className="text-[11px] text-rose-600 dark:text-rose-400 hover:text-rose-700 font-bold transition-colors cursor-pointer"
+                        title="Separar este ticket anidado"
+                      >
+                        Desanidar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Banner Informativo de Requerimiento de Emergencia / Regularización */}
         {Boolean(ticket.es_emergencia) && (

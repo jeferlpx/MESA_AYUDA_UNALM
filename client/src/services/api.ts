@@ -216,6 +216,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  mergeTickets: (ticketPrincipalId: number, ticketSecundariosIds: number[], motivo: string) =>
+    apiFetch('/tickets/merge', {
+      method: 'POST',
+      body: JSON.stringify({ ticketPrincipalId, ticketSecundariosIds, motivo }),
+    }),
+  unmergeTicket: (ticketId: number) =>
+    apiFetch(`/tickets/${ticketId}/unmerge`, { method: 'POST' }),
   updateStatus: (
     id: number,
     status: string,
@@ -300,6 +307,18 @@ export const api = {
     const query = params?.modulo ? `?modulo=${params.modulo}` : '';
     return apiFetch(`/admin/dashboard${query}`);
   },
+  getADRequests: (params?: { search?: string; estado?: string }) => {
+    const cleanParams: Record<string, string> = {};
+    if (params?.search && params.search.trim() !== '') cleanParams.search = params.search.trim();
+    if (params?.estado && params.estado !== 'TODOS') cleanParams.estado = params.estado;
+    const query = new URLSearchParams(cleanParams).toString();
+    return apiFetch(`/admin/ad-requests${query ? `?${query}` : ''}`);
+  },
+  updateADRequestStatus: (id: number, estado: 'PENDIENTE' | 'CREADO' | 'RECHAZADO', observacion?: string) =>
+    apiFetch(`/admin/ad-requests/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado, observacion }),
+    }),
   getAuditLogsGlobal: (params?: Record<string, string>) => {
     const query = new URLSearchParams(params).toString();
     return apiFetch(`/admin/audit-logs${query ? `?${query}` : ''}`);

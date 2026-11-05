@@ -30,4 +30,16 @@ router.post(
   AdminController.updateConfig
 );
 
+router.get(
+  '/ad-requests',
+  authorizeRoles('ADMIN', 'SUPERVISOR'),
+  AdminController.getADRequests
+);
+
+router.patch(
+  '/ad-requests/:id/status',
+  authorizeRoles('ADMIN', 'SUPERVISOR'),
+  AdminController.updateADRequestStatus
+);
+
 export default router;

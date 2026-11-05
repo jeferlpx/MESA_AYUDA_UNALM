@@ -17,6 +17,7 @@ import {
   Package,
   Star,
   Laptop,
+  UserPlus,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -327,6 +328,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Laptop className="w-4 h-4 text-blue-400 shrink-0" />
               <span>Bienes Institucionales</span>
+            </button>
+          )}
+
+          {/* 12. Solicitudes de Cuenta en Directorio Activo (Admin & Supervisores) */}
+          {isAdmin && (
+            <button
+              onClick={() => handleTabClick('admin-ad-requests')}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer active:scale-[0.98] ${
+                activeTab === 'admin-ad-requests'
+                  ? 'bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-md shadow-teal-950/40 font-bold ring-1 ring-white/10'
+                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white hover:translate-x-0.5'
+              }`}
+            >
+              <UserPlus className="w-4 h-4 text-teal-400 shrink-0" />
+              <span>Solicitudes Directorio Activo</span>
             </button>
           )}
         </nav>

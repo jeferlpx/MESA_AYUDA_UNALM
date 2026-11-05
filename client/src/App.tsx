@@ -16,6 +16,7 @@ import { SGWorkOrdersHistoryPage } from './pages/SGWorkOrdersHistoryPage';
 import { SGInventoryPage } from './pages/SGInventoryPage';
 import { SGDashboardPage } from './pages/SGDashboardPage';
 import { AdminEquipmentPage } from './pages/AdminEquipmentPage';
+import { AdminADRequestsPage } from './pages/AdminADRequestsPage';
 import { TicketDetailPage } from './pages/TicketDetailPage';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 import { X } from 'lucide-react';
@@ -238,6 +239,8 @@ const MainLayout: React.FC = () => {
             <AdminCatalogPage />
           ) : safeActiveTab === 'admin-equipment' ? (
             <AdminEquipmentPage onSelectTicketDetail={handleSelectTicketDetail} />
+          ) : safeActiveTab === 'admin-ad-requests' ? (
+            <AdminADRequestsPage />
           ) : safeActiveTab === 'infrastructure-inspections' ? (
             <InfrastructureInspectionsPage onSelectTicketDetail={handleSelectTicketDetail} />
           ) : safeActiveTab === 'sg-dashboard' ? (

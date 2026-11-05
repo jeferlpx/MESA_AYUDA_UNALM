@@ -1290,5 +1290,81 @@ export class TicketController {
       });
     }
   }
+
+  static async mergeTickets(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Usuario no autenticado' });
+      }
+
+      const { ticketPrincipalId, ticketSecundariosIds, motivo } = req.body;
+
+      if (!ticketPrincipalId || !Array.isArray(ticketSecundariosIds) || ticketSecundariosIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Debe seleccionar un ticket principal y al menos un ticket secundario para unificar.',
+        });
+      }
+
+      if (!motivo || !motivo.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Debe ingresar una justificación o motivo para la fusión y anidación de tickets.',
+        });
+      }
+
+      const result = await TicketModel.mergeTickets({
+        ticketPrincipalId: parseInt(ticketPrincipalId, 10),
+        ticketSecundariosIds: ticketSecundariosIds.map((id: any) => parseInt(id, 10)),
+        motivo: motivo.trim(),
+        usuarioId: req.user.id,
+        usuarioNombre: `${req.user.nombres} ${req.user.apellidos}`.trim(),
+        usuarioRol: req.user.rol,
+      });
+
+      return res.json({
+        success: true,
+        message: `Se unificaron exitosamente ${result.mergedCount} ticket(s) dentro del Ticket Principal #${result.principalCode}.`,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error('[mergeTickets Error]:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error al fusionar tickets',
+      });
+    }
+  }
+
+  static async unmergeTicket(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Usuario no autenticado' });
+      }
+
+      const { id } = req.params;
+      const ticketId = parseInt(id, 10);
+      if (isNaN(ticketId)) {
+        return res.status(400).json({ success: false, message: 'ID de ticket inválido' });
+      }
+
+      await TicketModel.unmergeTicket({
+        ticketId,
+        usuarioId: req.user.id,
+        usuarioNombre: `${req.user.nombres} ${req.user.apellidos}`.trim(),
+      });
+
+      return res.json({
+        success: true,
+        message: 'Ticket desanidado exitosamente. Ha retornado a su estado de gestión independiente.',
+      });
+    } catch (error: any) {
+      console.error('[unmergeTicket Error]:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error al desanidar ticket',
+      });
+    }
+  }
 }
 
