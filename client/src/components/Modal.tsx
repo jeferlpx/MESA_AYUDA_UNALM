@@ -48,34 +48,42 @@ export const Modal: React.FC<ModalProps> = ({
 
   const modalNode = (
     <div
-      className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/70 dark:bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
-      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+      className="fixed inset-0 z-[9999] overflow-hidden bg-slate-950/75 dark:bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+      style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh' }}
     >
       <div
-        className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 ring-1 ring-black/5 dark:ring-white/10 w-full ${maxWidthClasses[maxWidth]} transform transition-all overflow-hidden animate-in zoom-in-95 duration-200 my-auto`}
+        className={`bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 ring-1 ring-black/5 dark:ring-white/10 w-full ${maxWidthClasses[maxWidth]} max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="px-6 py-4 sm:py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/40 backdrop-blur-xs">
-          <div>
-            <h3 className="text-base sm:text-lg font-extrabold text-slate-800 dark:text-white tracking-tight">
+        {/* Modal Header: Más compacto para ahorrar espacio vertical */}
+        <div className="shrink-0 px-4 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/50 backdrop-blur-xs">
+          <div className="min-w-0 flex-1 pr-2">
+            <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
               {title}
             </h3>
             {subtitle && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-tight truncate">
                 {subtitle}
               </p>
             )}
           </div>
+          {/* Botón X con psicología del color rojo (alta visibilidad y accesibilidad inmediata) */}
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-2xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-all active:scale-90 cursor-pointer"
-            title="Cerrar ventana"
+            className="p-1.5 sm:p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/70 text-rose-600 dark:text-rose-400 border border-rose-200/90 dark:border-rose-800/70 shadow-xs hover:shadow-sm transition-all active:scale-90 cursor-pointer shrink-0 ml-2 group"
+            title="Cerrar ventana (Escape)"
+            aria-label="Cerrar ventana"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5] group-hover:scale-110 transition-transform" />
           </button>
         </div>
-        <div className="p-5 sm:p-7 max-h-[85vh] overflow-y-auto">{children}</div>
+
+        {/* Modal Body: Contenedor con scroll garantizado y padding inferior seguro */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 pb-24 sm:pb-6">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -27,8 +27,8 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(express.json({ limit: '35mb' }));
+app.use(express.urlencoded({ extended: true, limit: '35mb' }));
 
 // Servir estáticamente archivos adjuntos subidos
 app.use('/uploads', express.static(env.UPLOAD_DIR));

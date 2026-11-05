@@ -16,10 +16,9 @@ export async function compressImage(
   options: CompressionOptions = {}
 ): Promise<{ file: File; compressed: boolean; originalSize: number; compressedSize: number }> {
   const {
-    maxWidth = 1600,
-    maxHeight = 1600,
-    quality = 0.82,
-    maxSizeBytes = 300 * 1024, // Si pesa menos de 300KB y es razonable, no comprimir agresivamente
+    maxWidth = 1920,
+    maxHeight = 1920,
+    quality: userQuality,
   } = options;
 
   // Si no es un tipo de imagen comprimible (e.g. PDF, DOCX), devolver el archivo original
@@ -32,14 +31,28 @@ export async function compressImage(
     };
   }
 
-  // Si el archivo ya es muy pequeño (ej. < 150KB), no es necesario comprimir
-  if (file.size <= 150 * 1024) {
+  // Si el archivo ya es muy pequeño (ej. < 120KB), no es necesario recomprimir
+  if (file.size <= 120 * 1024) {
     return {
       file,
       compressed: false,
       originalSize: file.size,
       compressedSize: file.size,
     };
+  }
+
+  // Calidad inteligente adaptativa (estilo WhatsApp)
+  let quality = userQuality;
+  if (!quality) {
+    if (file.size > 10 * 1024 * 1024) {
+      quality = 0.80; // Fotos muy pesadas (>10MB de smartphones)
+    } else if (file.size > 4 * 1024 * 1024) {
+      quality = 0.82; // Fotos de 4MB a 10MB
+    } else if (file.size > 1 * 1024 * 1024) {
+      quality = 0.84; // Fotos de 1MB a 4MB
+    } else {
+      quality = 0.86; // Fotos ligeras
+    }
   }
 
   return new Promise((resolve) => {
@@ -50,7 +63,7 @@ export async function compressImage(
       img.onload = () => {
         let { width, height } = img;
 
-        // Calcular nueva escala manteniendo la proporción original
+        // Calcular nueva escala manteniendo la proporción original (Full HD estándar WhatsApp)
         if (width > maxWidth || height > maxHeight) {
           if (width > height) {
             height = Math.round((height * maxWidth) / width);
@@ -75,13 +88,14 @@ export async function compressImage(
           });
         }
 
-        // Suavizado de imagen de alta calidad
+        // Suavizado bicúbico de imagen de alta fidelidad
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convertir a JPEG o WebP
-        const outputMime = file.type === 'image/png' && file.size > 2 * 1024 * 1024 ? 'image/jpeg' : (file.type || 'image/jpeg');
+        // Convertir a JPEG optimizado si es PNG pesado o JPG/WebP
+        const isPngHeavy = file.type === 'image/png' && file.size > 1.5 * 1024 * 1024;
+        const outputMime = isPngHeavy ? 'image/jpeg' : (file.type || 'image/jpeg');
 
         canvas.toBlob(
           (blob) => {
