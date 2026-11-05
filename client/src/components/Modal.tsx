@@ -80,8 +80,8 @@ export const Modal: React.FC<ModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body: Contenedor con scroll garantizado y padding inferior seguro */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 pb-24 sm:pb-6">
+        {/* Modal Body: Contenedor con scroll garantizado en flujo natural */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 pb-8 sm:pb-7">
           {children}
         </div>
       </div>

@@ -581,8 +581,8 @@ export const EmergencyTicketModal: React.FC<EmergencyTicketModalProps> = ({
             />
           </div>
 
-          {/* Form Actions Footer (Sticky en móviles) */}
-          <div className="sticky bottom-0 z-20 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3 sm:p-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-end space-x-3 mt-4">
+          {/* Form Actions Footer */}
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end space-x-3 mt-6">
             <button
               type="button"
               onClick={onClose}
