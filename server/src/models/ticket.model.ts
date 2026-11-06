@@ -1121,7 +1121,7 @@ export class TicketModel {
       // 4. Agregar notas y trazabilidad en tickets secundarios
       for (const sec of secundariosRows as any[]) {
         await connection.query(
-          `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+          `INSERT INTO comentarios_ticket (ticket_id, usuario_id, mensaje, es_nota_interna, creado_en)
            VALUES (?, ?, ?, 1, NOW())`,
           [
             sec.id,
@@ -1131,8 +1131,8 @@ export class TicketModel {
         );
 
         await connection.query(
-          `INSERT INTO ticket_auditoria (ticket_id, usuario_id, accion, detalles)
-           VALUES (?, ?, 'FUSION_ANIDACION', ?)`,
+          `INSERT INTO logs_auditoria (ticket_id, usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo, ip_origen, fecha)
+           VALUES (?, ?, 'FUSION_ANIDACION', 'ticket_principal_id', NULL, ?, '127.0.0.1', NOW())`,
           [
             sec.id,
             usuarioId,
@@ -1143,7 +1143,7 @@ export class TicketModel {
 
       // 5. Agregar nota de trazabilidad en el ticket principal
       await connection.query(
-        `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+        `INSERT INTO comentarios_ticket (ticket_id, usuario_id, mensaje, es_nota_interna, creado_en)
          VALUES (?, ?, ?, 1, NOW())`,
         [
           ticketPrincipalId,
@@ -1153,8 +1153,8 @@ export class TicketModel {
       );
 
       await connection.query(
-        `INSERT INTO ticket_auditoria (ticket_id, usuario_id, accion, detalles)
-         VALUES (?, ?, 'FUSION_ANIDACION', ?)`,
+        `INSERT INTO logs_auditoria (ticket_id, usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo, ip_origen, fecha)
+         VALUES (?, ?, 'FUSION_ANIDACION', 'tickets_anidados', NULL, ?, '127.0.0.1', NOW())`,
         [
           ticketPrincipalId,
           usuarioId,
@@ -1217,7 +1217,7 @@ export class TicketModel {
       );
 
       await connection.query(
-        `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+        `INSERT INTO comentarios_ticket (ticket_id, usuario_id, mensaje, es_nota_interna, creado_en)
          VALUES (?, ?, ?, 1, NOW())`,
         [
           ticketId,
@@ -1227,7 +1227,7 @@ export class TicketModel {
       );
 
       await connection.query(
-        `INSERT INTO ticket_comentarios (ticket_id, usuario_id, comentario, es_interno, creado_en)
+        `INSERT INTO comentarios_ticket (ticket_id, usuario_id, mensaje, es_nota_interna, creado_en)
          VALUES (?, ?, ?, 1, NOW())`,
         [
           ticket.ticket_principal_id,

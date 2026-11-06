@@ -497,4 +497,33 @@
   }
 }
 
+/* Animaciones y Efectos Pro Max para Login e Inducción Institucional */
+@keyframes progress-fill {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-progress-fill {
+  animation: progress-fill 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shield-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.7)) drop-shadow(0 0 32px rgba(16, 185, 129, 0.3));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 26px rgba(52, 211, 153, 0.95)) drop-shadow(0 0 45px rgba(16, 185, 129, 0.5));
+    transform: scale(1.02);
+  }
+}
+
+.animate-shield-glow {
+  animation: shield-glow 3s ease-in-out infinite;
+}
+
 

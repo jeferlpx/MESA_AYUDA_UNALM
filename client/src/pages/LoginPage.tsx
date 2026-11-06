@@ -3,8 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { SearchableDependenciaSelect } from '../components/SearchableDependenciaSelect';
-import { ManualViewerModal } from '../components/ManualViewerModal';
 import { VideoTutorialModal } from '../components/VideoTutorialModal';
+import type { User as UserType } from '../types';
 import {
   Lock,
   AlertCircle,
@@ -29,10 +29,12 @@ import {
   Film,
   Sun,
   Moon,
+  Sparkles,
+  ExternalLink,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { loginWithLdap } = useAuth();
+  const { loginWithLdap, completeLogin } = useAuth();
   const { toggleTheme, isDark } = useTheme();
 
   // Background Image State
@@ -51,6 +53,10 @@ export const LoginPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loadingLdap, setLoadingLdap] = useState(false);
 
+  // Experiencia de Bienvenida / Splash Armonioso
+  const [welcomeUser, setWelcomeUser] = useState<UserType | null>(null);
+  const [isWelcomeFading, setIsWelcomeFading] = useState(false);
+
   // Register Form State (Solicitud de Usuario en Directorio Activo)
   const [regNombreCompleto, setRegNombreCompleto] = useState('');
   const [regDni, setRegDni] = useState('');
@@ -62,8 +68,7 @@ export const LoginPage: React.FC = () => {
   const [loadingRegister, setLoadingRegister] = useState(false);
   const [registerSuccessData, setRegisterSuccessData] = useState<any | null>(null);
 
-  // Modals de Inducción (Manual PDF y Video Tutorial)
-  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  // Modals de Inducción (Video Tutorial)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Tooltip active states
@@ -87,7 +92,18 @@ export const LoginPage: React.FC = () => {
 
     setLoadingLdap(true);
     try {
-      await loginWithLdap(cleanIdentifier, password);
+      // Pasamos deferSetUser = true para activar el splash de bienvenida armónico
+      const authenticatedUser = await loginWithLdap(cleanIdentifier, password, true);
+      if (authenticatedUser) {
+        setWelcomeUser(authenticatedUser);
+        // Transición placentera de bienvenida antes de entrar al portal
+        setTimeout(() => {
+          setIsWelcomeFading(true);
+          setTimeout(() => {
+            completeLogin(authenticatedUser);
+          }, 350);
+        }, 1500);
+      }
     } catch (err: any) {
       setError(err.message || 'Error en la autenticación con Directorio Activo (LDAP)');
     } finally {
@@ -202,15 +218,14 @@ export const LoginPage: React.FC = () => {
       <div className={`sm:mx-auto w-full ${authMode === 'register' ? 'sm:max-w-xl' : 'sm:max-w-md'} transition-all duration-300 relative z-20 px-4 sm:px-0`}>
         {/* Brand Header with Institutional Shield */}
         <div className="flex flex-col items-center text-center space-y-2 mb-3">
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-unalm-500 to-emerald-500 rounded-3xl blur-sm opacity-70 group-hover:opacity-100 transition duration-300" />
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white p-2 flex items-center justify-center shadow-2xl relative border border-white/40">
-              <img
-                src="./escudo-color.png"
-                alt="Escudo UNALM"
-                className="w-full h-full object-contain"
-              />
-            </div>
+          <div className="relative group flex items-center justify-center py-1">
+            {/* Ambient luminous glow conforming to shield contours */}
+            <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full scale-125 pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-70" />
+            <img
+              src="/escudo-color.png"
+              alt="Escudo Oficial UNALM"
+              className="w-16 h-16 sm:w-20 sm:h-20 object-contain relative z-10 transition-all duration-300 transform group-hover:scale-105 animate-shield-glow cursor-pointer"
+            />
           </div>
 
           <div className="space-y-0.5 pt-1">
@@ -422,14 +437,17 @@ export const LoginPage: React.FC = () => {
                   </p>
 
                   <div className="flex items-center justify-center space-x-3 text-[11px] text-slate-400 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsManualModalOpen(true)}
+                    <a
+                      href="/manual/manual_mda.pdf"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="hover:text-sky-300 font-semibold flex items-center space-x-1 cursor-pointer transition-colors"
+                      title="Abrir Manual de Usuario en nueva pestaña"
                     >
                       <BookOpen className="w-3 h-3 text-sky-400" />
                       <span>Manual PDF</span>
-                    </button>
+                      <ExternalLink className="w-2.5 h-2.5 opacity-70" />
+                    </a>
                     <span className="text-slate-600">•</span>
                     <button
                       type="button"
@@ -735,11 +753,13 @@ export const LoginPage: React.FC = () => {
 
         {/* Centro de Inducción & Recursos Multimedia */}
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 relative z-20">
-          {/* Card 1: Manual de Usuario (PDF) */}
-          <button
-            type="button"
-            onClick={() => setIsManualModalOpen(true)}
+          {/* Card 1: Manual de Usuario (PDF) - Apertura en nueva pestaña limpia */}
+          <a
+            href="/manual/manual_mda.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
             className="group relative flex items-center p-3 rounded-2xl bg-slate-950/70 hover:bg-slate-900/90 border border-slate-800/80 hover:border-sky-500/50 shadow-lg shadow-black/25 backdrop-blur-md transition-all duration-200 text-left hover:scale-[1.01] cursor-pointer"
+            title="Abrir Guía Oficial PDF en pestaña limpia"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-600/10 border border-sky-500/30 flex items-center justify-center shrink-0 mr-3 text-sky-400 group-hover:scale-105 group-hover:bg-sky-500/30 transition-all">
               <FileText className="w-5 h-5 text-sky-400 group-hover:text-sky-300" />
@@ -748,6 +768,10 @@ export const LoginPage: React.FC = () => {
               <div className="flex items-center space-x-1.5">
                 <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
                   Guía Oficial PDF
+                </span>
+                <span className="text-[9px] font-semibold text-sky-400 flex items-center space-x-0.5">
+                  <span>Nueva pestaña</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
                 </span>
               </div>
               <p className="text-xs font-bold text-slate-200 group-hover:text-white mt-0.5 truncate">
@@ -760,7 +784,7 @@ export const LoginPage: React.FC = () => {
             <span className="ml-1 text-slate-500 group-hover:text-sky-400 transition-colors">
               <ArrowRight className="w-4 h-4" />
             </span>
-          </button>
+          </a>
 
           {/* Card 2: Video Tutorial (HD) */}
           <button
@@ -797,11 +821,68 @@ export const LoginPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Visor Modal de Manual de Usuario (PDF) */}
-      <ManualViewerModal
-        isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
-      />
+      {/* Experiencia de Bienvenida Armoniosa & Entrada Satisfactoria al Sistema */}
+      {welcomeUser && (
+        <div
+          className={`fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 transition-all duration-350 ease-out ${
+            isWelcomeFading
+              ? 'opacity-0 scale-95 pointer-events-none'
+              : 'opacity-100 scale-100 animate-in fade-in zoom-in-95'
+          }`}
+        >
+          <div className="relative w-full max-w-md bg-slate-900/95 border border-emerald-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(16,185,129,0.25)] text-center overflow-hidden">
+            {/* Resplandor radial superior */}
+            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Escudo Oficial UNALM con brillo esmeralda armónico y contorno transparente */}
+            <div className="relative py-2 flex items-center justify-center">
+              <img
+                src="/escudo-color.png"
+                alt="Escudo UNALM"
+                className="w-20 h-20 sm:w-24 sm:h-24 object-contain filter drop-shadow-[0_0_26px_rgba(16,185,129,0.95)] animate-shield-glow"
+              />
+            </div>
+
+            {/* Chip de Éxito de Autenticación */}
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-xs font-bold tracking-wide mt-3 shadow-inner">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Autenticación Exitosa • Directorio Activo</span>
+            </div>
+
+            {/* Saludo Personalizado de Bienvenida */}
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-3">
+              ¡Bienvenido(a)!
+            </h2>
+            <p className="text-base sm:text-lg font-extrabold text-emerald-400 mt-0.5 capitalize">
+              {welcomeUser.nombres.toLowerCase()} {welcomeUser.apellidos.toLowerCase()}
+            </p>
+
+            {/* Dependencia & Rol */}
+            <div className="mt-4 flex flex-col items-center gap-1.5">
+              <div className="px-3 py-1 rounded-xl bg-slate-800/80 border border-slate-700/80 text-slate-300 text-xs font-medium max-w-full truncate shadow-xs">
+                🏛️ {welcomeUser.facultadDependencia || 'Universidad Nacional Agraria La Molina'}
+              </div>
+              <div className="px-3 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[11px] font-bold">
+                Rol: {welcomeUser.rolNombre || welcomeUser.rol}
+              </div>
+            </div>
+
+            {/* Barra Armónica de Carga e Ingreso */}
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium px-1">
+                <span className="flex items-center space-x-1.5">
+                  <Sparkles className="w-3 h-3 text-emerald-400 animate-spin" />
+                  <span>Iniciando su espacio de trabajo institucional...</span>
+                </span>
+                <span className="text-emerald-400 font-bold">Ingresando</span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-400 rounded-full animate-progress-fill" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Visor Modal de Video Tutorial de Uso (MP4 HD) */}
       <VideoTutorialModal

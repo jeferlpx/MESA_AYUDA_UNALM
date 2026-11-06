@@ -5,8 +5,9 @@ import { api } from '../services/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithLdap: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string, deferSetUser?: boolean) => Promise<User | null>;
+  loginWithLdap: (username: string, password: string, deferSetUser?: boolean) => Promise<User | null>;
+  completeLogin: (user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
   updateUser: (updatedFields: Partial<User>) => void;
@@ -70,20 +71,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, deferSetUser = false): Promise<User | null> => {
     const res = await api.login(email, password);
-    if (res.success && res.data?.token) {
+    if (res.success && res.data?.token && res.data?.user) {
       localStorage.setItem('otic_token', res.data.token);
-      setUser(res.data.user);
+      if (!deferSetUser) {
+        setUser(res.data.user);
+      }
+      return res.data.user;
     }
+    return null;
   };
 
-  const loginWithLdap = async (username: string, password: string) => {
+  const loginWithLdap = async (username: string, password: string, deferSetUser = false): Promise<User | null> => {
     const res = await api.ldapLogin(username, password);
-    if (res.success && res.data?.token) {
+    if (res.success && res.data?.token && res.data?.user) {
       localStorage.setItem('otic_token', res.data.token);
-      setUser(res.data.user);
+      if (!deferSetUser) {
+        setUser(res.data.user);
+      }
+      return res.data.user;
     }
+    return null;
+  };
+
+  const completeLogin = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
   };
 
   const logout = () => {
@@ -104,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         login,
         loginWithLdap,
+        completeLogin,
         logout,
         refreshUser,
         updateUser,
