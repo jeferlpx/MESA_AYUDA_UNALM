@@ -587,15 +587,19 @@ export class UserModel {
         [id]
       );
 
-      // 12. Registrar traza de auditoría de la eliminación permanente
-      await connection.query(
-        `INSERT INTO logs_auditoria (usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo, ip_origen, fecha)
-         VALUES (?, 'ELIMINACION_USUARIO', 'usuarios', ?, NULL, '127.0.0.1', NOW())`,
-        [
-          currentAdminId || fallbackAdminId,
-          `Usuario eliminado definitivamente: ID ${id}, Email: ${user.email}, Nombres: ${user.nombres} ${user.apellidos}`
-        ]
-      );
+      // 12. Registrar traza de auditoría de la eliminación permanente (tolerante a fallos)
+      try {
+        await connection.query(
+          `INSERT INTO logs_auditoria (ticket_id, usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo, ip_origen, fecha)
+           VALUES (NULL, ?, 'ELIMINACION_USUARIO', 'usuarios', ?, NULL, '127.0.0.1', NOW())`,
+          [
+            currentAdminId || fallbackAdminId,
+            `Usuario eliminado definitivamente: ID ${id}, Email: ${user.email}, Nombres: ${user.nombres} ${user.apellidos}`
+          ]
+        );
+      } catch (auditErr) {
+        console.warn('[Audit Warning on user delete]:', auditErr);
+      }
 
       await connection.commit();
       return res.affectedRows > 0;
