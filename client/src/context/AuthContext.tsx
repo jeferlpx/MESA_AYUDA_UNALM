@@ -102,6 +102,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     localStorage.removeItem('otic_token');
     setUser(null);
+    try {
+      window.history.replaceState({ tab: 'catalog', ticketId: null, ticketCode: null }, '', window.location.pathname);
+    } catch {
+      // Silenciar
+    }
   };
 
   const hasRole = (...rolesToCheck: RoleCode[]): boolean => {

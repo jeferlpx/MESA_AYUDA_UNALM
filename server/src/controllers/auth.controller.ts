@@ -294,10 +294,6 @@ export class AuthController {
         let isLocalPasswordValid = await bcrypt.compare(password, localCandidate.password_hash);
         if (!isLocalPasswordValid) {
           const validTestPasswords = [
-            'Unalm1902',
-            'Unalm1902$',
-            '@Unalm1902',
-            'unalm1902',
             'admin2026@',
             '123456',
             'Unalm2026$',

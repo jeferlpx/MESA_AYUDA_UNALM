@@ -165,7 +165,8 @@ async function syncLdapUsers() {
   console.log('✓ Conexión a Base de Datos establecida.');
 
   console.log('--- 3. Sincronización inteligente de usuarios (solo nuevos y campos modificados) ---');
-  const dummyPasswordHash = await bcrypt.hash('Unalm1902', 10);
+  const crypto = require('crypto');
+  const dummyPasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
   let insertedAd = 0;
   let updatedAd = 0;
   let unchangedAd = 0;

@@ -32,20 +32,31 @@ const MainLayout: React.FC = () => {
   const [isEquipmentLookupOpen, setIsEquipmentLookupOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
-  // Inicializar la pestaña según el perfil del usuario:
+  // Inicializar la pestaña y limpiar el estado de ticket al iniciar sesión o cambiar de usuario
   useEffect(() => {
+    setSelectedTicketId(null);
+    setSelectedTicketCode(null);
+    setSelectedTicketStatus(null);
+    setIsMobileMenuOpen(false);
+
     if (user) {
+      let defaultTab = 'catalog';
       if (hasRole('ADMIN', 'SUPERVISOR', 'SUPERVISOR_SG')) {
-        setActiveTab('admin-dashboard');
+        defaultTab = 'admin-dashboard';
       } else if (hasRole('MESA_AYUDA_SG')) {
-        setActiveTab('sg-dashboard');
+        defaultTab = 'sg-dashboard';
       } else if (hasRole('MESA_AYUDA', 'TECNICO', 'ESPECIALISTA_REDES', 'ESPECIALISTA_DESARROLLO', 'TECNICO_SG')) {
-        setActiveTab('specialist');
+        defaultTab = 'specialist';
       } else {
-        setActiveTab('catalog');
+        defaultTab = 'catalog';
       }
+      setActiveTab(defaultTab);
+      window.history.replaceState({ tab: defaultTab, ticketId: null, ticketCode: null }, '');
+    } else {
+      setActiveTab('catalog');
+      window.history.replaceState({ tab: 'catalog', ticketId: null, ticketCode: null }, '');
     }
-  }, [user, hasRole]);
+  }, [user?.id]);
 
   // Manejo de historial HTML5 para evitar que el usuario salga del sistema con la flecha Atrás
   useEffect(() => {
@@ -138,13 +149,8 @@ const MainLayout: React.FC = () => {
     window.history.pushState({ tab: newTab, ticketId: null }, '');
   };
 
-  const isMissingDependencia =
-    !user?.facultadDependencia ||
-    user.facultadDependencia.trim() === '' ||
-    user.facultadDependencia.includes('#N/D');
-
   const needsInitialSetup =
-    Boolean(user && (user.debeCambiarPassword || user.correoPendiente || isMissingDependencia));
+    Boolean(user && user.debeCambiarPassword === true);
 
   return (
     <div className="min-h-screen w-full max-w-full bg-slate-50 dark:bg-slate-950 flex flex-col overflow-x-hidden print:min-h-0 print:bg-white transition-colors duration-150">
