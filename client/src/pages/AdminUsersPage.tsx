@@ -58,6 +58,11 @@ export const AdminUsersPage: React.FC = () => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserAdmin | null>(null);
 
+  // Delete User Modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserAdmin | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+
   // Create/Edit Form fields
   const [formNombres, setFormNombres] = useState('');
   const [formApellidos, setFormApellidos] = useState('');
@@ -365,6 +370,34 @@ export const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleOpenDeleteModal = (u: UserAdmin) => {
+    setUserToDelete(u);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    try {
+      setDeletingUser(true);
+      const res = await api.deleteUser(userToDelete.id);
+      if (res.success) {
+        toast.success(
+          `El usuario ${userToDelete.nombres} ${userToDelete.apellidos} (${userToDelete.email}) fue eliminado permanentemente de la base de datos.`,
+          'Usuario Eliminado'
+        );
+        setIsDeleteModalOpen(false);
+        setUserToDelete(null);
+        await loadUsers();
+      } else {
+        toast.error(res.message || 'No se pudo eliminar el usuario.', 'Error');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar el usuario de la base de datos.', 'Error');
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+
   return (
     <div className="space-y-6 w-full max-w-[1700px] min-w-0 mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
       {/* Top Header Card */}
@@ -650,6 +683,13 @@ export const AdminUsersPage: React.FC = () => {
                             <CheckCircle className="w-3.5 h-3.5" />
                           )}
                         </button>
+                        <button
+                          onClick={() => handleOpenDeleteModal(u)}
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
+                          title="Eliminar usuario definitivamente de la base de datos"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-500 hover:text-rose-600" />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -820,6 +860,14 @@ export const AdminUsersPage: React.FC = () => {
                           <span>Activar</span>
                         </>
                       )}
+                    </button>
+                    <button
+                      onClick={() => handleOpenDeleteModal(u)}
+                      className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center space-x-1.5 cursor-pointer"
+                      title="Eliminar usuario definitivamente de la BD"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Eliminar</span>
                     </button>
                   </div>
                 </div>
@@ -1532,6 +1580,98 @@ export const AdminUsersPage: React.FC = () => {
                 <>
                   <RefreshCw className="w-4 h-4" />
                   <span>Sincronizar Ahora</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Confirmar Eliminación Definitiva de Usuario (Hard Delete) */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => !deletingUser && setIsDeleteModalOpen(false)}
+        title="Eliminar Usuario Definitivamente de la BD"
+      >
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start space-x-3.5">
+            <div className="p-2 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 shrink-0 mt-0.5">
+              <Trash2 className="w-5 h-5 text-rose-600" />
+            </div>
+            <div className="text-xs text-rose-900 dark:text-rose-200 space-y-1">
+              <span className="font-extrabold text-sm block text-rose-950 dark:text-rose-100">
+                ¿Está seguro de eliminar definitivamente a este usuario?
+              </span>
+              <p className="leading-relaxed text-rose-800 dark:text-rose-300">
+                Esta acción es <strong>irreversible</strong> y eliminará el registro de forma permanente de la base de datos MySQL centralizada. Se recomienda para depurar cuentas duplicadas o registros erróneos.
+              </p>
+            </div>
+          </div>
+
+          {userToDelete && (
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700">
+                  {userToDelete.nombres.charAt(0)}{userToDelete.apellidos.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {userToDelete.nombres} {userToDelete.apellidos}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {userToDelete.email}
+                  </p>
+                </div>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    userToDelete.estado === 'ACTIVO'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-slate-200 text-slate-700 border border-slate-300'
+                  }`}
+                >
+                  {userToDelete.estado}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-400">Rol:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{userToDelete.rolNombre || userToDelete.rol}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold text-slate-400">Dependencia:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block" title={userToDelete.facultadDependencia}>
+                    {userToDelete.facultadDependencia || 'No asignada'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="pt-3 flex justify-end space-x-2 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              disabled={deletingUser}
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={deletingUser}
+              onClick={handleConfirmDeleteUser}
+              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+            >
+              {deletingUser ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Eliminando de la BD...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  <span>Eliminar Definitivamente</span>
                 </>
               )}
             </button>

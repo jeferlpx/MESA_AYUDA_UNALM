@@ -78,6 +78,97 @@ export class UserModel {
     return parseUserRow(rows[0]);
   }
 
+  /**
+   * Búsqueda inteligente de usuario para Directorio Activo (AD / LDAP).
+   * Evita duplicados buscando primero por emails/identificadores y luego por nombres y apellidos completos.
+   */
+  static async findByLdapMatch(ldapUser: any, rawUsername?: string): Promise<UserDB | null> {
+    const candidateEmails = new Set<string>();
+
+    if (ldapUser.email) {
+      const e = ldapUser.email.toLowerCase().trim();
+      candidateEmails.add(e);
+      if (e.includes('@')) candidateEmails.add(e.split('@')[0]);
+      else candidateEmails.add(`${e}@lamolina.edu.pe`);
+    }
+
+    if (ldapUser.username || ldapUser.sAMAccountName) {
+      const u = (ldapUser.username || ldapUser.sAMAccountName).toLowerCase().trim();
+      candidateEmails.add(u);
+      candidateEmails.add(`${u}@lamolina.edu.pe`);
+    }
+
+    if (ldapUser.userPrincipalName) {
+      const upn = ldapUser.userPrincipalName.toLowerCase().trim();
+      candidateEmails.add(upn);
+      if (upn.includes('@')) candidateEmails.add(upn.split('@')[0]);
+    }
+
+    if (rawUsername) {
+      const raw = rawUsername.toLowerCase().trim();
+      candidateEmails.add(raw);
+      if (raw.includes('@')) candidateEmails.add(raw.split('@')[0]);
+      else candidateEmails.add(`${raw}@lamolina.edu.pe`);
+    }
+
+    const emailList = Array.from(candidateEmails);
+
+    // 1. Coincidencia directa por email o usuario
+    if (emailList.length > 0) {
+      const [rowsEmail] = await dbPool.query<RowDataPacket[]>(
+        `SELECT u.*, r.codigo as rol_codigo, r.nombre as rol_nombre,
+                (SELECT GROUP_CONCAT(r2.codigo SEPARATOR ',') 
+                 FROM usuario_roles ur 
+                 JOIN roles r2 ON ur.rol_id = r2.id 
+                 WHERE ur.usuario_id = u.id) as roles_codigos,
+                (SELECT GROUP_CONCAT(ur.rol_id SEPARATOR ',') 
+                 FROM usuario_roles ur 
+                 WHERE ur.usuario_id = u.id) as roles_ids_str
+         FROM usuarios u
+         INNER JOIN roles r ON u.rol_id = r.id
+         WHERE u.email IN (?) AND u.estado != 'BLOQUEADO'
+         ORDER BY (u.email = ?) DESC, u.id ASC LIMIT 1`,
+        [emailList, ldapUser.email ? ldapUser.email.toLowerCase().trim() : '']
+      );
+
+      if (rowsEmail.length > 0) {
+        return parseUserRow(rowsEmail[0]);
+      }
+    }
+
+    // 2. Coincidencia por Nombres y Apellidos completos para unificar cuentas migradas
+    const nom = (ldapUser.nombres || '').trim();
+    const ape = (ldapUser.apellidos || '').trim();
+
+    if (nom.length >= 2 && ape.length >= 2 && ape !== '-') {
+      const [rowsName] = await dbPool.query<RowDataPacket[]>(
+        `SELECT u.*, r.codigo as rol_codigo, r.nombre as rol_nombre,
+                (SELECT GROUP_CONCAT(r2.codigo SEPARATOR ',') 
+                 FROM usuario_roles ur 
+                 JOIN roles r2 ON ur.rol_id = r2.id 
+                 WHERE ur.usuario_id = u.id) as roles_codigos,
+                (SELECT GROUP_CONCAT(ur.rol_id SEPARATOR ',') 
+                 FROM usuario_roles ur 
+                 WHERE ur.usuario_id = u.id) as roles_ids_str
+         FROM usuarios u
+         INNER JOIN roles r ON u.rol_id = r.id
+         WHERE (
+           LOWER(TRIM(CONCAT(u.nombres, ' ', u.apellidos))) = LOWER(TRIM(CONCAT(?, ' ', ?)))
+           OR (LOWER(TRIM(u.nombres)) = LOWER(TRIM(?)) AND LOWER(TRIM(u.apellidos)) = LOWER(TRIM(?)))
+         )
+         AND u.estado != 'BLOQUEADO'
+         ORDER BY u.id ASC LIMIT 1`,
+        [nom, ape, nom, ape]
+      );
+
+      if (rowsName.length > 0) {
+        return parseUserRow(rowsName[0]);
+      }
+    }
+
+    return null;
+  }
+
   static async findById(id: number): Promise<UserDB | null> {
     const [rows] = await dbPool.query<RowDataPacket[]>(
       `SELECT u.id, u.nombres, u.apellidos, u.email, u.rol_id, u.cargo, u.debe_cambiar_password, u.correo_pendiente,
@@ -407,8 +498,117 @@ export class UserModel {
     }
   }
 
-  static async deleteUser(id: number): Promise<void> {
-    await dbPool.query(`UPDATE usuarios SET estado = 'INACTIVO' WHERE id = ?`, [id]);
+  /**
+   * Eliminar usuario definitivamente de la base de datos (Hard Delete).
+   * Gestiona de manera atómica la integridad referencial para evitar duplicados y errores de clave foránea.
+   */
+  static async deleteUserPermanently(id: number, currentAdminId?: number): Promise<boolean> {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('El usuario no existe o ya fue eliminado.');
+    }
+
+    if (user.id === 1 || user.email === 'admin@lamolina.edu.pe' || user.email === 'admin.otic@lamolina.edu.pe') {
+      throw new Error('No está permitido eliminar la cuenta raíz de Administrador General del Sistema.');
+    }
+
+    if (currentAdminId && user.id === currentAdminId) {
+      throw new Error('No puede eliminar su propia cuenta de usuario en sesión activa.');
+    }
+
+    const connection = await dbPool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // 1. Obtener administrador de respaldo para no perder historial de tickets del solicitante
+      const [adminRows] = await connection.query<RowDataPacket[]>(
+        "SELECT id FROM usuarios WHERE rol_id = 1 AND id != ? ORDER BY id ASC LIMIT 1",
+        [id]
+      );
+      const fallbackAdminId = adminRows && adminRows.length > 0 ? adminRows[0].id : 1;
+
+      // 2. Reasignar tickets donde era solicitante para preservar historial y evitar fallo de FK
+      await connection.query(
+        "UPDATE tickets SET solicitante_id = ? WHERE solicitante_id = ?",
+        [fallbackAdminId, id]
+      );
+
+      // 3. Tickets donde era técnico asignado
+      await connection.query(
+        "UPDATE tickets SET tecnico_id = NULL WHERE tecnico_id = ?",
+        [id]
+      );
+
+      // 4. Categorías donde era técnico por defecto
+      await connection.query(
+        "UPDATE categorias_servicio SET tecnico_defecto_id = NULL WHERE tecnico_defecto_id = ?",
+        [id]
+      );
+
+      // 5. Comentarios y notas de ticket
+      await connection.query(
+        "UPDATE comentarios_ticket SET usuario_id = ? WHERE usuario_id = ?",
+        [fallbackAdminId, id]
+      );
+
+      // 6. Archivos adjuntos
+      await connection.query(
+        "UPDATE adjuntos SET subido_por_id = ? WHERE subido_por_id = ?",
+        [fallbackAdminId, id]
+      );
+
+      // 7. Desvincular usuario de logs de auditoría previa
+      await connection.query(
+        "UPDATE logs_auditoria SET usuario_id = NULL WHERE usuario_id = ?",
+        [id]
+      );
+
+      // 8. Eliminar asignaciones secundarias en ticket_tecnicos
+      await connection.query(
+        "DELETE FROM ticket_tecnicos WHERE tecnico_id = ?",
+        [id]
+      );
+
+      // 9. Eliminar roles adicionales en usuario_roles
+      await connection.query(
+        "DELETE FROM usuario_roles WHERE usuario_id = ?",
+        [id]
+      );
+
+      // 10. Eliminar solicitudes de cuenta vinculadas en solicitudes_cuenta_ad si existiesen
+      await connection.query(
+        "DELETE FROM solicitudes_cuenta_ad WHERE email = ?",
+        [user.email]
+      );
+
+      // 11. ELIMINAR DEFINITIVAMENTE AL USUARIO DE LA TABLA usuarios
+      const [res]: any = await connection.query(
+        "DELETE FROM usuarios WHERE id = ?",
+        [id]
+      );
+
+      // 12. Registrar traza de auditoría de la eliminación permanente
+      await connection.query(
+        `INSERT INTO logs_auditoria (usuario_id, accion, campo_modificado, valor_anterior, valor_nuevo, ip_origen, fecha)
+         VALUES (?, 'ELIMINACION_USUARIO', 'usuarios', ?, NULL, '127.0.0.1', NOW())`,
+        [
+          currentAdminId || fallbackAdminId,
+          `Usuario eliminado definitivamente: ID ${id}, Email: ${user.email}, Nombres: ${user.nombres} ${user.apellidos}`
+        ]
+      );
+
+      await connection.commit();
+      return res.affectedRows > 0;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  static async deleteUser(id: number, currentAdminId?: number): Promise<void> {
+    await this.deleteUserPermanently(id, currentAdminId);
   }
 
   static async getTechnicianHistory(technicianId: number) {

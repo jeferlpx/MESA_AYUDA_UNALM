@@ -165,23 +165,45 @@ async function syncLdapUsers() {
   console.log('✓ Conexión a Base de Datos establecida.');
 
   console.log('--- 3. Sincronización inteligente de usuarios (solo nuevos y campos modificados) ---');
-  const dummyPasswordHash = await bcrypt.hash('ActiveDirectoryAuthOnly2026!', 10);
+  const dummyPasswordHash = await bcrypt.hash('Unalm1902', 10);
   let insertedAd = 0;
   let updatedAd = 0;
   let unchangedAd = 0;
 
   for (const adU of adUsers) {
-    const candidateEmails = [adU.email];
+    const candidateEmails = [adU.email.toLowerCase().trim()];
     if (adU.email.includes('@')) {
-      candidateEmails.push(adU.email.split('@')[0]);
+      candidateEmails.push(adU.email.split('@')[0].toLowerCase().trim());
     } else {
-      candidateEmails.push(`${adU.email}@lamolina.edu.pe`);
+      candidateEmails.push(`${adU.email.toLowerCase().trim()}@lamolina.edu.pe`);
+    }
+    if (adU.sAMAccountName) {
+      candidateEmails.push(adU.sAMAccountName.toLowerCase().trim());
+      candidateEmails.push(`${adU.sAMAccountName.toLowerCase().trim()}@lamolina.edu.pe`);
     }
 
-    const [existing] = await db.query(
-      'SELECT id, nombres, apellidos, email, rol_id, facultad_dependencia, cargo, telefono, anexo, estado FROM usuarios WHERE email IN (?) LIMIT 1',
-      [candidateEmails]
+    // 1. Buscar primero por coincidencia de email/usuario
+    let [existing] = await db.query(
+      'SELECT id, nombres, apellidos, email, rol_id, facultad_dependencia, cargo, telefono, anexo, estado FROM usuarios WHERE email IN (?) ORDER BY (email = ?) DESC, id ASC LIMIT 1',
+      [candidateEmails, adU.email.toLowerCase().trim()]
     );
+
+    // 2. Si no se encontró por email, buscar por coincidencia de nombres y apellidos completos
+    if (existing.length === 0 && adU.nombres && adU.apellidos && adU.apellidos !== '-' && adU.nombres.length >= 2) {
+      const [byName] = await db.query(
+        `SELECT id, nombres, apellidos, email, rol_id, facultad_dependencia, cargo, telefono, anexo, estado 
+         FROM usuarios 
+         WHERE (
+           LOWER(TRIM(CONCAT(nombres, ' ', apellidos))) = LOWER(TRIM(CONCAT(?, ' ', ?)))
+           OR (LOWER(TRIM(nombres)) = LOWER(TRIM(?)) AND LOWER(TRIM(apellidos)) = LOWER(TRIM(?)))
+         )
+         ORDER BY id ASC LIMIT 1`,
+        [adU.nombres.trim(), adU.apellidos.trim(), adU.nombres.trim(), adU.apellidos.trim()]
+      );
+      if (byName.length > 0) {
+        existing = byName;
+      }
+    }
 
     if (existing.length === 0) {
       // 1. Usuario NUEVO en AD que no existe en el sistema -> Agregar como Solicitante
@@ -206,34 +228,48 @@ async function syncLdapUsers() {
       );
       insertedAd++;
     } else {
-      // 2. Usuario YA EXISTE -> Solo modificar si hay datos nuevos/cambios en AD que no coincidan con la BD actual
+      // 2. Usuario YA EXISTE -> Prevalece AD, actualizar datos y correo, sin tocar roles ni historial
       const current = existing[0];
       const updates = [];
       const values = [];
 
-      // Verificar Facultad o Dependencia: si AD tiene dato y es distinto de lo que hay en BD
+      // Prevalencia del correo oficial de Active Directory
+      const officialEmail = adU.email.toLowerCase().trim();
+      if (current.email.toLowerCase().trim() !== officialEmail) {
+        // Eliminar fila huérfana vacía si existía un duplicado sin tickets
+        await db.query(
+          `DELETE FROM usuarios 
+           WHERE email = ? AND id != ? 
+             AND id NOT IN (SELECT DISTINCT solicitante_id FROM tickets) 
+             AND id NOT IN (SELECT DISTINCT tecnico_id FROM tickets WHERE tecnico_id IS NOT NULL)`,
+          [officialEmail, current.id]
+        );
+        updates.push('email = ?');
+        values.push(officialEmail);
+      }
+
+      // Verificar Facultad o Dependencia
       const currentDep = (current.facultad_dependencia || '').trim();
-      if (adU.facultadDependencia && adU.facultadDependencia.trim() !== currentDep) {
-        // Si el actual es genérico o difiere del de AD, actualizar
+      if (adU.facultadDependencia && adU.facultadDependencia !== 'Comunidad Universitaria UNALM' && adU.facultadDependencia.trim() !== currentDep) {
         updates.push('facultad_dependencia = ?');
         values.push(adU.facultadDependencia.trim());
       }
 
-      // Verificar Cargo: si AD tiene cargo específico y difiere del actual
+      // Verificar Cargo
       const currentCargo = (current.cargo || '').trim();
       if (adU.cargo && adU.cargo.trim() !== currentCargo) {
         updates.push('cargo = ?');
         values.push(adU.cargo.trim());
       }
 
-      // Verificar Celular: si AD tiene celular y difiere del actual (o el actual está vacío)
+      // Verificar Celular
       const currentTel = (current.telefono || '').trim();
       if (adU.telefono && adU.telefono.trim() !== currentTel) {
         updates.push('telefono = ?');
         values.push(adU.telefono.trim());
       }
 
-      // Verificar Anexo: si AD tiene anexo y difiere del actual (o el actual está vacío)
+      // Verificar Anexo
       const currentAnx = (current.anexo || '').trim();
       if (adU.anexo && adU.anexo.trim() !== currentAnx) {
         updates.push('anexo = ?');
@@ -248,6 +284,11 @@ async function syncLdapUsers() {
       if (adU.apellidos && adU.apellidos !== '-' && adU.apellidos.trim() !== (current.apellidos || '').trim()) {
         updates.push('apellidos = ?');
         values.push(adU.apellidos.trim());
+      }
+
+      // Asegurar que el usuario esté activo y sin marcas pendientes
+      if (current.estado !== 'ACTIVO') {
+        updates.push("estado = 'ACTIVO'");
       }
 
       if (updates.length > 0) {

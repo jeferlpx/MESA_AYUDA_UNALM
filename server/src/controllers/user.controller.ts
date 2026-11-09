@@ -392,13 +392,23 @@ export class UserController {
   static async deleteUser(req: AuthenticatedRequest, res: Response) {
     try {
       const id = parseInt(req.params.id, 10);
-      await UserModel.deleteUser(id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'ID de usuario inválido' });
+      }
+
+      const currentAdminId = req.user?.id;
+      await UserModel.deleteUserPermanently(id, currentAdminId);
+
       return res.json({
         success: true,
-        message: 'Usuario desactivado del sistema',
+        message: 'Usuario eliminado definitivamente de la base de datos',
       });
-    } catch (error) {
-      return res.status(500).json({ success: false, message: 'Error al desactivar usuario' });
+    } catch (error: any) {
+      console.error('[deleteUser error]:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error al eliminar usuario de la base de datos',
+      });
     }
   }
 
