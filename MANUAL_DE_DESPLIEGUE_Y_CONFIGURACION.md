@@ -354,6 +354,30 @@ Contraseña por defecto de prueba: `Unalm2026#` o `123456`:
 - Control de inspecciones preventivas físicas (SIGI).
 - Registro de materiales usados y sobrantes por orden de trabajo.
 
+### D. Unificación y Anidación de Tickets Duplicados (Triage Helpdesk)
+- Permite a los operadores de Mesa de Ayuda seleccionar múltiples tickets que reportan una misma incidencia o requerimiento.
+- Se designa un **Ticket Principal Activo** y los demás se consolidan como **Tickets Secundarios Anidados** con estado cerrado automático (`UNIFICADO_ANIDADO`).
+- Exige obligatoriamente el ingreso de un **Motivo de Unificación** que queda registrado en la bitácora y auditoría de todos los tickets involucrados.
+
+### E. Módulo de Tickets de Emergencia y Regularización
+- Permite a los operadores de Mesa de Ayuda crear tickets en nombre de cualquier usuario de la entidad recibido vía telefónica, WhatsApp o atención presencial.
+- Búsqueda en tiempo real sobre el Directorio Activo (`ldap-search-all`) filtrando personal activo y excluyendo cuentas privilegiadas de administración.
+- Posibilidad de realizar el triage y derivación simultánea en una sola pantalla.
+
+### F. Módulo de Depuración Administrativa de Tickets con PIN Maestro
+- Permite al Administrador General purgar de forma física y definitiva tickets de prueba, registros erróneos o transacciones corruptas.
+- Protegido por confirmación en dos pasos y el ingreso de un **PIN Maestro** (`ADMIN_PURGE_PIN=1308` configurable en `.env`).
+- Limpia en cascada registros en base de datos (`trazabilidad`, `comentarios`, `historial`) y archivos físicos en el servidor de archivos.
+
+### G. Bandeja Administrativa de Solicitudes de Cuenta AD
+- Panel de control exclusivo para el Administrador General para supervisar todas las peticiones generadas desde la pestaña «Registrarme».
+- Permite filtrar por estado (`PENDIENTE`, `EN_PROCESO`, `ATENDIDO`, `RECHAZADO`), buscar por DNI, correo o nombre, y enviar notificaciones formales de respuesta.
+
+### H. Compresor Inteligente de Evidencias y Soporte Móvil
+- Permite adjuntar imágenes pesadas de hasta 25MB tomadas directamente con cámaras móviles.
+- Compresión en el cliente mediante Canvas / Web API (estilo WhatsApp) reduciendo el peso de 5MB–25MB a ~300KB sin pérdida perceptible de nitidez antes de la subida.
+- Interfaz adaptativa con selector de cámara en móviles, modal flotante sticky y soporte para modo oscuro / modo claro.
+
 ---
 
 ## 11. Guía de Personalización para Otras Entidades
